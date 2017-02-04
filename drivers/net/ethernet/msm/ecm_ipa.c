@@ -1,14 +1,4 @@
-/* Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 and
- * only version 2 as published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- */
+
 
 #include <linux/debugfs.h>
 #include <linux/errno.h>
@@ -1043,22 +1033,7 @@ static void ecm_ipa_deregister_properties(void)
 	return;
 }
 
-/**
- * ecm_ipa_configure() - make IPA core end-point specific configuration
- * @usb_to_ipa_hdl: handle of usb_to_ipa end-point for IPA driver
- * @ipa_to_usb_hdl: handle of ipa_to_usb end-point for IPA driver
- * @host_ethaddr: host Ethernet address in network order
- * @device_ethaddr: device Ethernet address in network order
- *
- * Configure the usb_to_ipa and ipa_to_usb end-point registers
- * - USB->IPA end-point: disable de-aggregation, enable link layer
- *   header removal (Ethernet removal), source NATing and default routing.
- * - IPA->USB end-point: disable aggregation, add link layer header (Ethernet)
- * - allocate Ethernet device
- * - register to Linux network stack
- *
- * Returns negative errno, or zero on success
- */
+
 
 
 static void ecm_ipa_rm_notify(void *user_data, enum ipa_rm_event event,

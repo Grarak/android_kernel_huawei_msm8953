@@ -110,6 +110,8 @@
 #define TTY_PARANOIA_CHECK 1
 #define CHECK_TTY_COUNT 1
 
+#include <linux/hwboot_fail.h>
+
 struct ktermios tty_std_termios = {	/* for the benefit of tty drivers  */
 	.c_iflag = ICRNL | IXON,
 	.c_oflag = OPOST | ONLCR,
@@ -2594,6 +2596,28 @@ static int tiocsetd(struct tty_struct *tty, int __user *p)
 }
 
 /**
+ *	tiocgetd	-	get line discipline
+ *	@tty: tty device
+ *	@p: pointer to user data
+ *
+ *	Retrieves the line discipline id directly from the ldisc.
+ *
+ *	Locking: waits for ldisc reference (in case the line discipline
+ *		is changing or the tty is being hungup)
+ */
+
+static int tiocgetd(struct tty_struct *tty, int __user *p)
+{
+	struct tty_ldisc *ld;
+	int ret;
+
+	ld = tty_ldisc_ref_wait(tty);
+	ret = put_user(ld->ops->num, p);
+	tty_ldisc_deref(ld);
+	return ret;
+}
+
+/**
  *	send_break	-	performed time break
  *	@tty: device to break on
  *	@duration: timeout in mS
@@ -2807,7 +2831,7 @@ long tty_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	case TIOCGSID:
 		return tiocgsid(tty, real_tty, p);
 	case TIOCGETD:
-		return put_user(tty->ldisc->ops->num, (int __user *)p);
+		return tiocgetd(tty, p);
 	case TIOCSETD:
 		return tiocsetd(tty, p);
 	case TIOCVHANGUP:
@@ -3510,6 +3534,9 @@ void tty_default_fops(struct file_operations *fops)
 void __init console_init(void)
 {
 	initcall_t *call;
+
+	set_boot_stage(KERNEL_CONSOLE_INITCALL);
+	printk(KERN_INFO "Boot_monitor set stage:KERNEL_CONSOLE_INITCALL\n");
 
 	/* Setup the default TTY line discipline. */
 	tty_ldisc_begin();

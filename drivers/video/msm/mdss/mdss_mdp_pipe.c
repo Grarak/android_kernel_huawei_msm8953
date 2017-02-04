@@ -17,6 +17,7 @@
 #include <linux/errno.h>
 #include <linux/iopoll.h>
 #include <linux/mutex.h>
+#include <linux/hw_lcd_common.h>
 
 #include "mdss_mdp.h"
 #include "mdss_mdp_trace.h"
@@ -1417,6 +1418,10 @@ static bool mdss_mdp_check_pipe_in_use(struct mdss_mdp_pipe *pipe)
 		mixercfg_extn = mdss_mdp_get_mixercfg(mixer, true);
 		if ((mixercfg & stage_off_mask) ||
 			(mixercfg_extn & stage_off_extn_mask)) {
+#ifdef CONFIG_HUAWEI_DSM
+			/* report pipe dsm error */
+			lcd_report_dsm_err(DSM_LCD_MDSS_PIPE_ERROR_NO,mixercfg,0);
+#endif
 			pr_err("IN USE: mixer=%d pipe=%d mcfg:0x%x mask:0x%x mcfg_extn:0x%x mask_ext:0x%x\n",
 				mixer->num, pipe->num,
 				mixercfg, stage_off_mask,
@@ -1430,6 +1435,10 @@ static bool mdss_mdp_check_pipe_in_use(struct mdss_mdp_pipe *pipe)
 		mixercfg_extn = mdss_mdp_get_mixercfg(mixer, true);
 		if ((mixercfg & stage_off_mask) ||
 			(mixercfg_extn & stage_off_extn_mask)) {
+#ifdef CONFIG_HUAWEI_DSM
+			/* report pipe dsm error */
+			lcd_report_dsm_err(DSM_LCD_MDSS_PIPE_ERROR_NO,mixercfg,0);
+#endif
 			pr_err("IN USE: mixer=%d pipe=%d mcfg:0x%x mask:0x%x mcfg_extn:0x%x mask_ext:0x%x\n",
 				mixer->num, pipe->num,
 				mixercfg, stage_off_mask,
@@ -1561,6 +1570,9 @@ int mdss_mdp_pipe_fetch_halt(struct mdss_mdp_pipe *pipe, bool is_recovery)
 
 		pr_err("%pS: pipe%d is not idle. xin_id=%d\n",
 			__builtin_return_address(0), pipe->num, pipe->xin_id);
+#ifdef CONFIG_HUAWEI_DSM
+		lcd_report_dsm_err(DSM_LCD_MDSS_PIPE_ERROR_NO,pipe->xin_id,0);
+#endif
 
 		mutex_lock(&mdata->reg_lock);
 		idle_mask = BIT(pipe->xin_id + 16);

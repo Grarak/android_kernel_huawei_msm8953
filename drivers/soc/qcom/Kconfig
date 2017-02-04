@@ -794,6 +794,12 @@ config MSM_REMOTEQDSS
 	  enable/disable these events. Interface located in
 	  /sys/class/remoteqdss.
 
+config HUAWEI_MODEM_CRASH_LOG
+	bool "huawei modem crash log"
+	default n
+	help
+	huawei modem crash log control
+
 source "drivers/soc/qcom/memshare/Kconfig"
 
 endif # ARCH_MSM

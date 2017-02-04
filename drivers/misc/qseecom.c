@@ -130,6 +130,9 @@ static DEFINE_MUTEX(qsee_bw_mutex);
 static DEFINE_MUTEX(app_access_lock);
 static DEFINE_MUTEX(clk_access_lock);
 
+#define HUAWEI_TA_MAGIC_NUM  0x08171401
+#define HUAWEI_UID  1000
+
 struct qseecom_registered_listener_list {
 	struct list_head                 list;
 	struct qseecom_register_listener_req svc;
@@ -2640,6 +2643,17 @@ static int __qseecom_send_cmd(struct qseecom_dev_handle *data,
 	bool found_app = false;
 	void *cmd_buf = NULL;
 	size_t cmd_len;
+	uint32_t huawei_magicnum;
+
+	huawei_magicnum = *(uint32_t*)(req->cmd_req_buf);
+	if (huawei_magicnum == HUAWEI_TA_MAGIC_NUM)
+	{
+		if (HUAWEI_UID != __kuid_val(current->cred->uid))
+		{
+			pr_err("UID:%u from userspace is error\n", __kuid_val(current->cred->uid));
+			return -EINVAL;
+		}
+	}
 
 	reqd_len_sb_in = req->cmd_req_len + req->resp_len;
 	/* find app_id & img_name from list */
