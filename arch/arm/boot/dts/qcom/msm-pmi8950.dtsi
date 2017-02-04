@@ -31,12 +31,6 @@
 			qcom,secondary-pon-reset;
 			qcom,hard-reset-poweroff-type =
 				<PON_POWER_OFF_SHUTDOWN>;
-
-			pon_perph_reg: qcom,pon_perph_reg {
-				regulator-name = "pon_spare_reg";
-				qcom,pon-spare-reg-addr = <0x8c>;
-				qcom,pon-spare-reg-bit = <1>;
-			};
 		};
 
 		pmi8950_vadc: vadc@3100 {
@@ -527,8 +521,7 @@
 			qcom,dim-method = "linear";
 			qcom,hyb-thres = <625>;
 			qcom,sync-dly-us = <800>;
-			qcom,fs-curr-ua = <20000>;
-			qcom,en-phase-stag;
+			qcom,fs-curr-ua = <21000>;
 			qcom,ibb-pwrup-dly = <8>;
 			qcom,led-strings-list = [00 01];
 			qcom,en-ext-pfet-sc-pro;
@@ -608,9 +601,6 @@
 				qcom,duration = <1280>;
 				qcom,id = <2>;
 				qcom,current = <625>;
-				reg0 {
-					regulator-name = "pon_spare_reg";
-				};
 			};
 		};
 
@@ -620,7 +610,6 @@
 			interrupts = <0x3 0xc0 0x0>,
 					<0x3 0xc0 0x1>;
 			interrupt-names = "sc-irq", "play-irq";
-			vcc_pon-supply = <&pon_perph_reg>;
 			qcom,play-mode = "direct";
 			qcom,wave-play-rate-us = <5263>;
 			qcom,actuator-type = "erm";

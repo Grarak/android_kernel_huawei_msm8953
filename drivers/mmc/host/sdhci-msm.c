@@ -196,6 +196,9 @@
 #define MAX_DRV_TYPES_SUPPORTED_HS200	4
 #define MSM_AUTOSUSPEND_DELAY_MS 100
 
+/* Timeout value to avoid infinite waiting for pwr_irq */
+#define MSM_PWR_IRQ_TIMEOUT_MS 10000
+
 static const u32 tuning_block_64[] = {
 	0x00FF0FFF, 0xCCC3CCFF, 0xFFCC3CC3, 0xEFFEFFFE,
 	0xDDFFDFFF, 0xFBFFFBFF, 0xFF7FFFBF, 0xEFBDF777,
@@ -1721,6 +1724,12 @@ struct sdhci_msm_pltfm_data *sdhci_msm_populate_pdata(struct device *dev,
 		dev_err(dev, "failed parsing vdd data\n");
 		goto out;
 	}
+
+	if (of_get_property(np, "huawei,reduce_resume_time", NULL)) {
+		if(pdata->vreg_data->vdd_data && pdata->vreg_data->vdd_data->is_always_on)
+			msm_host->mmc->caps2 |= MMC_CAP2_REDUCE_RESUME_TIME;
+	}
+
 	if (sdhci_msm_dt_parse_vreg_info(dev,
 					 &pdata->vreg_data->vdd_io_data,
 					 "vdd-io")) {
@@ -1758,6 +1767,14 @@ struct sdhci_msm_pltfm_data *sdhci_msm_populate_pdata(struct device *dev,
 			pdata->caps |= MMC_CAP_1_2V_DDR
 						| MMC_CAP_UHS_DDR50;
 	}
+
+	if (of_get_property(np, "huawei,support-polling", NULL))
+	{
+		/*Set the polling flag to caps based on device tree*/
+		pr_info("polling has enable sucess.\n");
+		pdata->caps |= MMC_CAP_NEEDS_POLL;
+	}
+
 
 	if (of_get_property(np, "qcom,nonremovable", NULL))
 		pdata->nonremovable = true;
@@ -2578,8 +2595,10 @@ static void sdhci_msm_check_power_status(struct sdhci_host *host, u32 req_type)
 	 */
 	if (done)
 		init_completion(&msm_host->pwr_irq_completion);
-	else
-		wait_for_completion(&msm_host->pwr_irq_completion);
+	else if (!wait_for_completion_timeout(&msm_host->pwr_irq_completion,
+				msecs_to_jiffies(MSM_PWR_IRQ_TIMEOUT_MS)))
+		__WARN_printf("%s: request(%d) timed out waiting for pwr_irq\n",
+					mmc_hostname(host->mmc), req_type);
 
 	pr_debug("%s: %s: request %d done\n", mmc_hostname(host->mmc),
 			__func__, req_type);
@@ -3851,6 +3870,52 @@ static void sdhci_msm_cmdq_init(struct sdhci_host *host,
 }
 #endif
 
+
+/*
+ * To get the gpio info when SD plugged in, based on the device tree info of sdcard
+ * return 1, mean high active and set MMC_CAP2_CD_ACTIVE_HIGH bit
+ * return 0, mean low  active and clear MMC_CAP2_CD_ACTIVE_HIGH
+ * return -1, mean has some errors
+ **/
+static int sdhci_msm_set_gpio_info(struct sdhci_msm_pltfm_data *pdata)
+{
+	int ret = -1;
+	char prop_name[MAX_PROP_SIZE] = {0};
+	struct device_node *np = NULL;
+
+	if(!pdata)
+	{
+		/*if pdata is NULL,return 0.*/
+		return ret;
+	}
+
+	/*try to get the device node huawei-gpio-info.*/
+	np = of_find_compatible_node(NULL,NULL,"huawei-gpio-info");
+	if(!np)
+	{
+		/*if np is NULL, default is high: return 0. it is recommended to record the active info by dts*/
+		pdata->caps2 |= MMC_CAP2_CD_ACTIVE_HIGH;
+		ret = 1;
+		return ret;
+	}
+
+	snprintf(prop_name, MAX_PROP_SIZE,
+			"%s", "huawei,voltage-active-high");
+	if (of_get_property(np, prop_name, NULL))
+	{
+		pdata->caps2 |= MMC_CAP2_CD_ACTIVE_HIGH;
+		ret = 1;
+	}
+	else
+	{
+		pdata->caps2 &= ~MMC_CAP2_CD_ACTIVE_HIGH;
+		ret = 0;
+	}
+
+	return ret;
+}
+
+
 static bool sdhci_msm_is_bootdevice(struct device *dev)
 {
 	if (strnstr(saved_command_line, "androidboot.bootdevice=",
@@ -3964,6 +4029,20 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 			dev_err(&pdev->dev, "DT parsing error\n");
 			goto pltfm_free;
 		}
+
+		if(sdhci_msm_set_gpio_info(msm_host->pdata) == 1)
+		{
+			pr_err("the voltage of gpio is high when insert the sdcard.\n");
+		}
+		else if (sdhci_msm_set_gpio_info(msm_host->pdata) == 0)
+		{
+			pr_err("the voltage of gpio is low when insert the sdcard.\n");
+		}
+		else
+		{
+			pr_err("sdhci_msm_set_gpio_info failed.\n");
+		}
+
 	} else {
 		dev_err(&pdev->dev, "No device tree node\n");
 		goto pltfm_free;
@@ -4553,7 +4632,6 @@ static int sdhci_msm_suspend(struct device *dev)
 	if (gpio_is_valid(msm_host->pdata->status_gpio) &&
 		(msm_host->mmc->slot.cd_irq >= 0))
 			disable_irq(msm_host->mmc->slot.cd_irq);
-
 	if (pm_runtime_suspended(dev)) {
 		pr_debug("%s: %s: already runtime suspended\n",
 		mmc_hostname(host->mmc), __func__);
@@ -4585,7 +4663,6 @@ static int sdhci_msm_resume(struct device *dev)
 	if (gpio_is_valid(msm_host->pdata->status_gpio) &&
 		(msm_host->mmc->slot.cd_irq >= 0))
 			enable_irq(msm_host->mmc->slot.cd_irq);
-
 	if (pm_runtime_suspended(dev)) {
 		pr_debug("%s: %s: runtime suspended, defer system resume\n",
 		mmc_hostname(host->mmc), __func__);

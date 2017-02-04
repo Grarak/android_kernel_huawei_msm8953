@@ -49,6 +49,11 @@
 
 #define MPAGE_DA_EXTENT_TAIL 0x01
 
+#ifdef CONFIG_HUAWEI_IO_TRACING
+#include <huawei_platform/iotrace/iotrace.h>
+DEFINE_TRACE(ext4_da_write_begin_end);
+#endif
+
 static __u32 ext4_inode_csum(struct inode *inode, struct ext4_inode *raw,
 			      struct ext4_inode_info *ei)
 {
@@ -2559,6 +2564,12 @@ static int ext4_da_write_begin(struct file *file, struct address_space *mapping,
 						      pagep, fsdata);
 		if (ret < 0)
 			return ret;
+
+#ifdef CONFIG_HUAWEI_IO_TRACING			
+		if (ret == 1)
+			trace_ext4_da_write_begin_end(inode, pos, len, flags);
+#endif
+
 		if (ret == 1)
 			return 0;
 	}
@@ -2620,6 +2631,10 @@ retry_journal:
 		page_cache_release(page);
 		return ret;
 	}
+
+#ifdef CONFIG_HUAWEI_IO_TRACING	
+	trace_ext4_da_write_begin_end(inode, pos, len, flags);
+#endif
 
 	*pagep = page;
 	return ret;
@@ -3408,6 +3423,7 @@ int ext4_can_truncate(struct inode *inode)
 
 int ext4_punch_hole(struct inode *inode, loff_t offset, loff_t length)
 {
+#if 0
 	struct super_block *sb = inode->i_sb;
 	ext4_lblk_t first_block, stop_block;
 	struct address_space *mapping = inode->i_mapping;
@@ -3531,6 +3547,12 @@ out_dio:
 out_mutex:
 	mutex_unlock(&inode->i_mutex);
 	return ret;
+#else
+	/*
+	 * Disabled as per b/28760453
+	 */
+	return -EOPNOTSUPP;
+#endif
 }
 
 int ext4_inode_attach_jinode(struct inode *inode)

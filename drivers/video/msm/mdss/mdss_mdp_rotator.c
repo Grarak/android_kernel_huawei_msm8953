@@ -19,6 +19,7 @@
 #include <linux/types.h>
 #include <linux/sync.h>
 #include <linux/sw_sync.h>
+#include <linux/hw_lcd_common.h>
 
 #include "mdss_mdp.h"
 #include "mdss_mdp_rotator.h"
@@ -618,8 +619,13 @@ static void mdss_mdp_rotator_commit_wq_handler(struct work_struct *work)
 	mutex_lock(&rot->lock);
 
 	ret = mdss_mdp_rotator_queue_helper(rot);
-	if (ret)
+	if (ret) {
 		pr_err("rotator queue failed\n");
+#ifdef CONFIG_HUAWEI_DSM
+		/* report rotator dsm error */
+		lcd_report_dsm_err(DSM_LCD_MDSS_ROTATOR_ERROR_NO,ret,0);
+#endif
+	}
 
 	if (rot->rot_sync_pt_data) {
 		atomic_inc(&rot->rot_sync_pt_data->commit_cnt);

@@ -26,11 +26,7 @@
 
 #define ROOT_I 2
 
-/*
- * ino_t is 32-bits on 32-bit arch. We have to squash the 64-bit value down
- * so that it will fit. We use hash_64 to convert the value to 31 bits, and
- * then add 1, to ensure that we don't end up with a 0 as the value.
- */
+
 #if BITS_PER_LONG == 64
 static inline ino_t
 cifs_uniqueid_to_ino_t(u64 fileid)
