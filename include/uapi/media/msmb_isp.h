@@ -6,6 +6,7 @@
 #define MAX_PLANES_PER_STREAM 3
 #define MAX_NUM_STREAM 7
 
+#define ISP_VERSION_48        48
 #define ISP_VERSION_47        47
 #define ISP_VERSION_46        46
 #define ISP_VERSION_44        44
@@ -17,6 +18,9 @@
 #define ISP_META_CHANNEL_BIT  (0x10000 << 3)
 #define ISP_SCRATCH_BUF_BIT   (0x10000 << 4)
 #define ISP_OFFLINE_STATS_BIT (0x10000 << 5)
+#define ISP_SVHDR_IN_BIT      (0x10000 << 6) /* RDI hw stream for SVHDR */
+#define ISP_SVHDR_OUT_BIT     (0x10000 << 7) /* SVHDR output bufq stream*/
+
 #define ISP_STATS_STREAM_BIT  0x80000000
 
 struct msm_vfe_cfg_cmd_list;

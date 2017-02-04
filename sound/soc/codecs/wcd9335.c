@@ -7260,6 +7260,13 @@ static int tasha_mad_input_put(struct snd_kcontrol *kcontrol,
 
 	tasha_mad_input = ucontrol->value.integer.value[0];
 
+	if (tasha_mad_input >= ARRAY_SIZE(tasha_conn_mad_text)) {
+		dev_err(codec->dev,
+			"%s: tasha_mad_input = %d out of bounds\n",
+			__func__, tasha_mad_input);
+		return -EINVAL;
+	}
+
 	if (!strcmp(tasha_conn_mad_text[tasha_mad_input], "NOTUSED1") ||
 	    !strcmp(tasha_conn_mad_text[tasha_mad_input], "NOTUSED2") ||
 	    !strcmp(tasha_conn_mad_text[tasha_mad_input], "NOTUSED3") ||
@@ -10400,7 +10407,7 @@ static int tasha_get_channel_map(struct snd_soc_dai *dai,
 	case AIF4_PB:
 	case AIF_MIX1_PB:
 		if (!rx_slot || !rx_num) {
-			pr_err("%s: Invalid rx_slot %p or rx_num %p\n",
+			pr_err("%s: Invalid rx_slot %pK or rx_num %pK\n",
 				 __func__, rx_slot, rx_num);
 			return -EINVAL;
 		}
@@ -10419,7 +10426,7 @@ static int tasha_get_channel_map(struct snd_soc_dai *dai,
 	case AIF4_MAD_TX:
 	case AIF4_VIFEED:
 		if (!tx_slot || !tx_num) {
-			pr_err("%s: Invalid tx_slot %p or tx_num %p\n",
+			pr_err("%s: Invalid tx_slot %pK or tx_num %pK\n",
 				 __func__, tx_slot, tx_num);
 			return -EINVAL;
 		}
@@ -10457,7 +10464,7 @@ static int tasha_set_channel_map(struct snd_soc_dai *dai,
 	core = dev_get_drvdata(dai->codec->dev->parent);
 
 	if (!tx_slot || !rx_slot) {
-		pr_err("%s: Invalid tx_slot=%p, rx_slot=%p\n",
+		pr_err("%s: Invalid tx_slot=%pK, rx_slot=%pK\n",
 			__func__, tx_slot, rx_slot);
 		return -EINVAL;
 	}

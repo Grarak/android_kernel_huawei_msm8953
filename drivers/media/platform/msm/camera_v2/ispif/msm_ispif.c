@@ -837,7 +837,7 @@ static uint16_t msm_ispif_get_cids_mask_from_cfg(
 	uint16_t cids_mask = 0;
 	BUG_ON(!entry);
 
-	for (i = 0; i < entry->num_cids; i++)
+	for (i = 0; i < entry->num_cids && i < MAX_CID_CH_v2; i++)
 		cids_mask |= (1 << entry->cids[i]);
 
 	return cids_mask;
@@ -967,7 +967,7 @@ static void msm_ispif_intf_cmd(struct ispif_device *ispif, uint32_t cmd_bits,
 			pr_err("%s: invalid interface type\n", __func__);
 			return;
 		}
-		if (params->entries[i].num_cids > MAX_CID_CH) {
+		if (params->entries[i].num_cids > MAX_CID_CH_v2) {
 			pr_err("%s: out of range of cid_num %d\n",
 				__func__, params->entries[i].num_cids);
 			return;
@@ -1041,7 +1041,6 @@ static int msm_ispif_stop_immediately(struct ispif_device *ispif,
 			cid_mask, params->entries[i].vfe_intf, 0);
 	}
 
-	rc = msm_ispif_reset_hw(ispif);
 	return rc;
 }
 
@@ -1168,7 +1167,6 @@ static int msm_ispif_stop_frame_boundary(struct ispif_device *ispif,
 	}
 
 end:
-	rc = msm_ispif_reset_hw(ispif);
 	return rc;
 }
 
