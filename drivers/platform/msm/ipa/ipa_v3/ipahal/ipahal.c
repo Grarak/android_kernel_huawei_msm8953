@@ -1219,10 +1219,12 @@ void ipahal_cp_proc_ctx_to_hw_buff(enum ipa_hdr_proc_type type,
 		(!phys_base && !hdr_base_addr) ||
 		!hdr_base_addr ||
 		((is_hdr_proc_ctx == false) && !offset_entry)) {
+
 		IPAHAL_ERR(
 			"invalid input: hdr_len:%u phys_base:%pad hdr_base_addr:%u is_hdr_proc_ctx:%d offset_entry:%pK\n"
 			, hdr_len, &phys_base, hdr_base_addr
 			, is_hdr_proc_ctx, offset_entry);
+
 		BUG();
 	}
 
@@ -1269,12 +1271,14 @@ int ipahal_init(enum ipa_hw_type ipa_hw_type, void __iomem *base)
 
 	if (ipa_hw_type < IPA_HW_v3_0) {
 		IPAHAL_ERR("ipahal supported on IPAv3 and later only\n");
+
 		result = -EINVAL;
 		goto bail_free_ctx;
 	}
 
 	if (ipa_hw_type >= IPA_HW_MAX) {
 		IPAHAL_ERR("invalid IPA HW type (%d)\n", ipa_hw_type);
+
 		result = -EINVAL;
 		goto bail_free_ctx;
 	}

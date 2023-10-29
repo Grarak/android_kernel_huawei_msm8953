@@ -26,6 +26,7 @@
  *          0: tell VFS to invalidate dentry
  *          1: dentry is valid
  */
+//static int sdcardfs_d_revalidate(struct dentry *dentry, struct nameidata *nd)
 static int sdcardfs_d_revalidate(struct dentry *dentry, unsigned int flags)
 {
 	int err = 1;
@@ -35,6 +36,7 @@ static int sdcardfs_d_revalidate(struct dentry *dentry, unsigned int flags)
 	struct dentry *lower_cur_parent_dentry = NULL;
 	struct dentry *lower_dentry = NULL;
 
+//	if (nd && nd->flags & LOOKUP_RCU)
 	if (flags & LOOKUP_RCU)
 		return -ECHILD;
 
@@ -73,7 +75,11 @@ static int sdcardfs_d_revalidate(struct dentry *dentry, unsigned int flags)
 		err = 0;
 		goto out;
 	}
-
+	if (dentry == lower_dentry) {
+		err = 0;
+		panic("sdcardfs: dentry is equal to lower_dentry\n");
+		goto out;
+	}
 	if (dentry < lower_dentry) {
 		spin_lock(&dentry->d_lock);
 		spin_lock(&lower_dentry->d_lock);
@@ -117,7 +123,6 @@ static void sdcardfs_d_release(struct dentry *dentry)
 	free_dentry_private_data(dentry);
 	return;
 }
-
 static int sdcardfs_hash_ci(const struct dentry *dentry,
 				struct qstr *qstr)
 {
@@ -177,6 +182,4 @@ const struct dentry_operations sdcardfs_ci_dops = {
 	.d_release	= sdcardfs_d_release,
 	.d_hash 	= sdcardfs_hash_ci,
 	.d_compare	= sdcardfs_cmp_ci,
-	.d_canonical_path = sdcardfs_get_real_lower,
 };
-

@@ -716,7 +716,7 @@ static int map_memory(struct cal_type_data *cal_type,
 			goto done;
 		}
 
-		pr_debug("%s: cal type %d call map\n",
+		pr_err("%s: cal type %d call map\n",
 			__func__, cal_type->info.reg.cal_type);
 		ret = cal_type->info.cal_util_callbacks.
 			map_cal(cal_type->info.reg.cal_type, cal_block);
@@ -742,7 +742,7 @@ static int unmap_memory(struct cal_type_data *cal_type,
 			(cal_block->map_data.q6map_handle == 0)) {
 			goto done;
 		}
-		pr_debug("%s: cal type %d call unmap\n",
+		pr_err("%s: cal type %d call unmap\n",
 			__func__, cal_type->info.reg.cal_type);
 		ret = cal_type->info.cal_util_callbacks.
 			unmap_cal(cal_type->info.reg.cal_type, cal_block);

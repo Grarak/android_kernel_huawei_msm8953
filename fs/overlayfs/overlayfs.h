@@ -169,11 +169,7 @@ struct inode *ovl_d_select_inode(struct dentry *dentry, unsigned file_flags);
 
 struct inode *ovl_new_inode(struct super_block *sb, umode_t mode,
 			    struct ovl_entry *oe);
-static inline void ovl_copyattr(struct inode *from, struct inode *to)
-{
-	to->i_uid = from->i_uid;
-	to->i_gid = from->i_gid;
-}
+void ovl_copyattr(struct inode *from, struct inode *to);
 
 /* dir.c */
 extern const struct inode_operations ovl_dir_inode_operations;

@@ -1994,6 +1994,7 @@ static int ipa3_q6_clean_q6_rt_tbls(enum ipa_ip_type ip,
 	}
 	tbls_cnt = modem_rt_index_hi - modem_rt_index_lo + 1;
 
+
 	desc = kcalloc(tbls_cnt, sizeof(struct ipa3_desc), GFP_KERNEL);
 	if (!desc) {
 		IPAERR("failed to allocate memory\n");
@@ -2007,6 +2008,7 @@ static int ipa3_q6_clean_q6_rt_tbls(enum ipa_ip_type ip,
 		retval = -ENOMEM;
 		goto free_desc;
 	}
+
 
 	for (index = modem_rt_index_lo; index <= modem_rt_index_hi; index++) {
 		cmd.is_read = false;
@@ -2074,6 +2076,7 @@ static int ipa3_q6_clean_q6_tables(void)
 
 	if (ipa3_q6_clean_q6_flt_tbls(IPA_IP_v4, IPA_RULE_HASHABLE, &mem)) {
 		IPAERR("failed to clean q6 flt tbls (v4/hashable)\n");
+
 		retval = -EFAULT;
 		goto bail_dma;
 	}
@@ -2091,10 +2094,12 @@ static int ipa3_q6_clean_q6_tables(void)
 		IPAERR("failed to clean q6 flt tbls (v6/non-hashable)\n");
 		retval = -EFAULT;
 		goto bail_dma;
+
 	}
 
 	if (ipa3_q6_clean_q6_rt_tbls(IPA_IP_v4, IPA_RULE_HASHABLE, &mem)) {
 		IPAERR("failed to clean q6 rt tbls (v4/hashable)\n");
+
 		retval = -EFAULT;
 		goto bail_dma;
 	}
@@ -2112,6 +2117,7 @@ static int ipa3_q6_clean_q6_tables(void)
 		IPAERR("failed to clean q6 rt tbls (v6/non-hashable)\n");
 		retval = -EFAULT;
 		goto bail_dma;
+
 	}
 
 	/* Flush rules cache */
@@ -2136,7 +2142,9 @@ static int ipa3_q6_clean_q6_tables(void)
 		&reg_write_cmd, false);
 	if (!cmd_pyld) {
 		IPAERR("fail construct register_write imm cmd\n");
+
 		retval = -EFAULT;
+
 		goto bail_desc;
 	}
 	desc->opcode =
@@ -5034,6 +5042,7 @@ static int ipa_smmu_uc_cb_probe(struct device *dev)
 
 	IPADBG("UC CB PROBE sub pdev=%p\n", dev);
 
+
 	ret = of_property_read_u32_array(dev->of_node, "qcom,iova-mapping",
 			iova_ap_mapping, 2);
 	if (ret) {
@@ -5058,12 +5067,15 @@ static int ipa_smmu_uc_cb_probe(struct device *dev)
 			return -EOPNOTSUPP;
 		}
 	}
+
 	IPADBG("UC CB PROBE=%p create IOMMU mapping\n", dev);
 
 	cb->dev = dev;
 	cb->mapping = arm_iommu_create_mapping(msm_iommu_get_bus(dev),
 			cb->va_start, cb->va_size);
+
 	if (IS_ERR_OR_NULL(cb->mapping)) {
+
 		IPADBG("Fail to create mapping\n");
 		/* assume this failure is because iommu driver is not ready */
 		return -EPROBE_DEFER;
@@ -5105,6 +5117,7 @@ static int ipa_smmu_uc_cb_probe(struct device *dev)
 		}
 		IPADBG("SMMU atomic set\n");
 
+
 		if (smmu_info.fast_map) {
 			if (iommu_domain_set_attr(cb->mapping->domain,
 					DOMAIN_ATTR_FAST,
@@ -5117,6 +5130,7 @@ static int ipa_smmu_uc_cb_probe(struct device *dev)
 			IPADBG("SMMU fast map set\n");
 		}
 	}
+
 
 	IPADBG("UC CB PROBE sub pdev=%p attaching IOMMU device\n", dev);
 	ret = arm_iommu_attach_device(cb->dev, cb->mapping);
@@ -5142,6 +5156,7 @@ static int ipa_smmu_ap_cb_probe(struct device *dev)
 	int fast = 1;
 	int bypass = 1;
 	u32 iova_ap_mapping[2];
+
 	u32 add_map_size;
 	const u32 *add_map;
 	void *smem_addr;
@@ -5160,6 +5175,7 @@ static int ipa_smmu_ap_cb_probe(struct device *dev)
 	cb->va_end = cb->va_start + cb->va_size;
 	IPADBG("AP va_start=0x%x va_sise=0x%x\n", cb->va_start, cb->va_size);
 
+
 	if (ipa3_ctx->use_64_bit_dma_mask) {
 		if (dma_set_mask(dev, DMA_BIT_MASK(64)) ||
 				dma_set_coherent_mask(dev, DMA_BIT_MASK(64))) {
@@ -5177,7 +5193,9 @@ static int ipa_smmu_ap_cb_probe(struct device *dev)
 	cb->dev = dev;
 	cb->mapping = arm_iommu_create_mapping(msm_iommu_get_bus(dev),
 					cb->va_start, cb->va_size);
+
 	if (IS_ERR_OR_NULL(cb->mapping)) {
+
 		IPADBG("Fail to create mapping\n");
 		/* assume this failure is because iommu driver is not ready */
 		return -EPROBE_DEFER;
@@ -5235,6 +5253,7 @@ static int ipa_smmu_ap_cb_probe(struct device *dev)
 		return result;
 	}
 
+
 	add_map = of_get_property(dev->of_node,
 		"qcom,additional-mapping", &add_map_size);
 	if (add_map) {
@@ -5282,6 +5301,7 @@ static int ipa_smmu_ap_cb_probe(struct device *dev)
 			iova_p, pa_p, size_p,
 			IOMMU_READ | IOMMU_WRITE | IOMMU_DEVICE);
 	}
+
 
 
 	smmu_info.present = true;

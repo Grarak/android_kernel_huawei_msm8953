@@ -818,7 +818,9 @@ static int rh850_do_blocking_ioctl(struct net_device *netdev,
 		len = ioctl_data->len;
 		data = ioctl_data->data;
 	}
-	LOGDI("rh850_do_blocking_ioctl len %d\n", len);
+
+	LOGDI("rh850_do_blocking_ioctl len and data %d %x\n",
+	      len, (void *)data);
 	mutex_lock(&priv_data->spi_lock);
 
 	priv_data->wait_cmd = spi_cmd;

@@ -357,6 +357,9 @@ struct mm_rss_stat {
 };
 
 struct kioctx_table;
+#ifdef CONFIG_BLK_DEV_THROTTLING
+struct blk_throtl_io_limit;
+#endif
 struct mm_struct {
 	struct vm_area_struct *mmap;		/* list of VMAs */
 	struct rb_root mm_rb;
@@ -420,6 +423,9 @@ struct mm_struct {
 #ifdef CONFIG_AIO
 	spinlock_t			ioctx_lock;
 	struct kioctx_table __rcu	*ioctx_table;
+#endif
+#ifdef CONFIG_BLK_DEV_THROTTLING
+	struct blk_throtl_io_limit	*io_limit;
 #endif
 #ifdef CONFIG_MEMCG
 	/*

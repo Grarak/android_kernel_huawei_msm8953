@@ -56,6 +56,7 @@ struct bdi_writeback {
 	struct list_head b_io;		/* parked for writeback */
 	struct list_head b_more_io;	/* parked for more writeback */
 	spinlock_t list_lock;		/* protects the b_* lists */
+	atomic_t dirty_sleeping;	/* waiting on dirty limit exceeded */
 };
 
 struct backing_dev_info {
