@@ -25,9 +25,6 @@
 
 
 #define MMC_AUTOSUSPEND_DELAY_MS	3000
-#ifdef CONFIG_HW_MMC_TEST
-#define CARD_ADDR_MAGIC 0xA5A55A5AA5A55A5ALL
-#endif
 
 struct mmc_ios {
 	unsigned int	clock;			/* clock rate */
@@ -566,9 +563,6 @@ struct mmc_host {
 		ktime_t start;
 	} perf;
 	bool perf_enable;
-#ifdef CONFIG_HW_MMC_TEST
-	int test_status;            /* save mmc_test status */
-#endif
 #endif
 	enum dev_state dev_status;
 	bool			wakeup_on_idle;

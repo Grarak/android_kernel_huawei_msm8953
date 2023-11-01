@@ -10,9 +10,4 @@ obj-$(CONFIG_SDIO_UART)		+= sdio_uart.o
 
 obj-$(CONFIG_MMC_BLOCK_TEST)		+= mmc_block_test.o
 
-obj-$(CONFIG_HW_MMC_TEST_MODULE)	+= hw_mmc_test.o
-
 obj-$(CONFIG_MMC_FFU)		+= ffu.o
-
-obj-$(CONFIG_HW_SD_HEALTH_DETECT)	+= mmc_health_diag.o
-obj-$(CONFIG_HW_EMMC_PROTECT_MODULE)    += hw_mmc_protect.o
