@@ -27,10 +27,6 @@
 #include "sd.h"
 #include "sd_ops.h"
 
-#ifdef CONFIG_MMC_PASSWORDS
-#include "lock.h"
-#endif
-
 #define UHS_SDR104_MIN_DTR	(100 * 1000 * 1000)
 #define UHS_DDR50_MIN_DTR	(50 * 1000 * 1000)
 #define UHS_SDR50_MIN_DTR	(50 * 1000 * 1000)
@@ -258,8 +254,6 @@ static int mmc_read_ssr(struct mmc_card *card)
 
 	for (i = 0; i < 16; i++)
 		ssr[i] = be32_to_cpu(ssr[i]);
-
-	card->ssr.speed_class = UNSTUFF_BITS(ssr, 440 - 384, 8);
 
 	/*
 	 * UNSTUFF_BITS only works with four u32s so we have to offset the
@@ -683,11 +677,7 @@ out:
 /*
  * UHS-I specific initialization procedure
  */
-#ifdef CONFIG_MMC_PASSWORDS
-int mmc_sd_init_uhs_card(struct mmc_card *card)
-#else
 static int mmc_sd_init_uhs_card(struct mmc_card *card)
-#endif
 {
 	int err;
 	u8 *status;
@@ -769,8 +759,6 @@ MMC_DEV_ATTR(manfid, "0x%06x\n", card->cid.manfid);
 MMC_DEV_ATTR(name, "%s\n", card->cid.prod_name);
 MMC_DEV_ATTR(oemid, "0x%04x\n", card->cid.oemid);
 MMC_DEV_ATTR(serial, "0x%08x\n", card->cid.serial);
-MMC_DEV_ATTR(speed_class, "0x%08x\n", card->ssr.speed_class);
-MMC_DEV_ATTR(state, "0x%08x\n", card->state);
 
 
 static struct attribute *sd_std_attrs[] = {
@@ -786,8 +774,6 @@ static struct attribute *sd_std_attrs[] = {
 	&dev_attr_name.attr,
 	&dev_attr_oemid.attr,
 	&dev_attr_serial.attr,
-	&dev_attr_speed_class.attr,
-	&dev_attr_state.attr,
 	NULL,
 };
 ATTRIBUTE_GROUPS(sd_std);
@@ -796,31 +782,6 @@ struct device_type sd_type = {
 	.groups = sd_std_groups,
 };
 
-#ifdef CONFIG_MMC_PASSWORDS
-/*
- * Adds sysfs entries as relevant.
- */
-static int mmc_sd_sysfs_add(struct mmc_host *host, struct mmc_card *card)
-{
-	int ret;
-
-	ret = mmc_lock_add_sysfs(card);
-	if (ret < 0) {
-		return ret;
-	}
-
-	return 0;
-}
-
-/*
- * Removes the sysfs entries added by mmc_sysfs_add().
- */
-static void mmc_sd_sysfs_remove(struct mmc_host *host, struct mmc_card *card)
-{
-	mmc_lock_remove_sysfs(card);
-}
-#endif
-
 /*
  * Fetch CID from card.
  */
@@ -828,12 +789,7 @@ int mmc_sd_get_cid(struct mmc_host *host, u32 ocr, u32 *cid, u32 *rocr)
 {
 	int err;
 	u32 max_current;
-
-	/*
-	 * change retry time from 10 to 5,to avoid suspend or resume 12s
-	 * timeout panic,especially bad card
-	 */
-	int retries = 5;
+	int retries = 10;
 	u32 pocr = ocr;
 
 try_again:
@@ -1032,36 +988,19 @@ unsigned mmc_sd_get_max_clock(struct mmc_card *card)
 	return max_dtr;
 }
 
-#ifdef CONFIG_MMC_PASSWORDS
-void mmc_sd_go_highspeed(struct mmc_card *card)
-{
-	//mmc_card_set_highspeed(card);//temp remove this
-	mmc_set_timing(card->host, MMC_TIMING_SD_HS);
-}
-#endif
-
 /*
  * Handle the detection and initialisation of a card.
  *
  * In the case of a resume, "oldcard" will contain the card
  * we're trying to reinitialise.
  */
-#ifdef CONFIG_MMC_PASSWORDS
-int mmc_sd_init_card(struct mmc_host *host, u32 ocr,
-	struct mmc_card *oldcard)
-#else
 static int mmc_sd_init_card(struct mmc_host *host, u32 ocr,
 	struct mmc_card *oldcard)
-#endif
 {
 	struct mmc_card *card;
 	int err;
 	u32 cid[4];
 	u32 rocr = 0;
-
-#ifdef CONFIG_MMC_PASSWORDS
-	u32 status = 0;
-#endif
 
 	BUG_ON(!host);
 	WARN_ON(!host->claimed);
@@ -1098,27 +1037,6 @@ static int mmc_sd_init_card(struct mmc_host *host, u32 ocr,
 		host->card = card;
 	}
 
-#ifdef CONFIG_MMC_PASSWORDS
-    /* whether voltage switch just for sd card */
-	if (rocr & SD_ROCR_S18A)
-		card->swith_voltage = true;
-	else
-		card->swith_voltage = false;
-
-	printk("%s, sd card voltage swith(3.3v--> 1.8v) is %d\n", __func__, card->swith_voltage);
-
-	/*
-	 * Check if card is locked.
-	 */
-	err = mmc_send_status(card, &status);
-	if (err)
-		goto free_card;
-	if (status & R1_CARD_IS_LOCKED) {
-		mmc_card_set_encrypted(card);
-		mmc_card_set_locked(card);
-	}
-#endif
-
 	if (!oldcard) {
 		err = mmc_sd_get_csd(host, card);
 		if (err)
@@ -1142,47 +1060,6 @@ static int mmc_sd_init_card(struct mmc_host *host, u32 ocr,
 		if (err)
 			goto free_card;
 	}
-#ifdef CONFIG_MMC_PASSWORDS
-	if (status & R1_CARD_IS_LOCKED) {
-		if (card->auto_unlock ) {
-			if (card->unlock_pwd[0] > 0 ) {
-				//unlock sd card
-				err = mmc_lock_unlock_by_buf(card,  card->unlock_pwd+1,(int)card->unlock_pwd[0], MMC_LOCK_MODE_UNLOCK);
-				if(err) {
-					printk("[SDLOCK] %s unlock failed \n",__func__);
-				} else {
-					printk("[SDLOCK] %s unlock success \n",__func__);
-
-					if(!mmc_card_locked(card)) {
-						card->auto_unlock = false;
-						printk("[SDLOCK] %s unlock success and sdcard status is unlocked.\n",__func__);
-					} else {
-						printk("[SDLOCK] %s unlock success but sdcard status is locked, abnormal status.\n",__func__);
-					}
-				}
-
-				//Check if card is locked
-				err = mmc_send_status(card, &status);
-				if (err) {
-					printk("[SDLOCK] %s resume sd card exception /n",__func__);
-					goto free_card;
-				}
-			} else {
-				printk("[SDLOCK] %s unlock password is null\n",__func__);
-			}
-		}
-
-		if (status & R1_CARD_IS_LOCKED) {
-			printk(KERN_WARNING "[SDLOCK] sdcard is locked\n");
-			host->card = card;
-			goto locked_card;
-		} else {
-			printk(KERN_WARNING "[SDLOCK] sdcard resume to unlocked\n");
-		}
-	} else {
-		printk(KERN_WARNING "[SDLOCK] sdcard is unlocked\n");
-	}
-#endif
 
 	err = mmc_sd_setup_card(host, card, oldcard != NULL);
 	if (err)
@@ -1224,9 +1101,6 @@ static int mmc_sd_init_card(struct mmc_host *host, u32 ocr,
 	card->clk_scaling_highest = mmc_sd_get_max_clock(card);
 	card->clk_scaling_lowest = host->f_min;
 
-#ifdef CONFIG_MMC_PASSWORDS
-locked_card:
-#endif
 	return 0;
 
 free_card:
@@ -1338,14 +1212,6 @@ static int _mmc_sd_suspend(struct mmc_host *host)
 		mmc_card_set_suspended(host->card);
 	}
 
-#ifdef CONFIG_MMC_PASSWORDS
-	/*if sd is unlock , set auto unlock flag , so system resume auto unlock sd card */
-	if (!mmc_card_locked(host->card)) {
-		pr_err("%s: [SDLOCK] sdcard is unlocked on suspend and set auto_unlock = true. \n", mmc_hostname(host));
-		host->card->auto_unlock = true;
-	}
-#endif
-
 out:
 	mmc_release_host(host);
 	return err;
@@ -1376,7 +1242,6 @@ static int _mmc_sd_resume(struct mmc_host *host)
 	int err = 0;
 #ifdef CONFIG_MMC_PARANOID_SD_INIT
 	int retries;
-	int delayTime;
 #endif
 
 	BUG_ON(!host);
@@ -1389,28 +1254,18 @@ static int _mmc_sd_resume(struct mmc_host *host)
 
 	mmc_power_up(host, host->card->ocr);
 #ifdef CONFIG_MMC_PARANOID_SD_INIT
-	/*
-	 * change retry time from 5 to 4,to avoid suspend or resume 12s
-	 * timeout panic,especially bad card
-	 */
-	retries = 4;
-	delayTime = 5;
+	retries = 5;
 	while (retries) {
 		err = mmc_sd_init_card(host, host->card->ocr, host->card);
-		if (host->ops->get_cd && host->ops->get_cd(host) == 0) {
-			printk(KERN_ERR "%s(%s): found no card (%d). Stop retrying\n",
-			       __func__, mmc_hostname(host), err);
-			break;
-		}
+
 		if (err) {
 			printk(KERN_ERR "%s: Re-init card rc = %d (retries = %d)\n",
 			       mmc_hostname(host), err, retries);
 			retries--;
 			mmc_power_off(host);
-			usleep_range(delayTime * 1000, delayTime * 1000 + 500);
+			usleep_range(5000, 5500);
 			mmc_power_up(host, host->card->ocr);
 			mmc_select_voltage(host, host->card->ocr);
-			delayTime *= 2;
 			continue;
 		}
 		break;
@@ -1419,9 +1274,8 @@ static int _mmc_sd_resume(struct mmc_host *host)
 	err = mmc_sd_init_card(host, host->card->ocr, host->card);
 #endif
 	mmc_card_clr_suspended(host->card);
-       mmc_release_host(host);
+
 	err = mmc_resume_clk_scaling(host);
-       mmc_claim_host(host);
 	if (err) {
 		pr_err("%s: %s: fail to resume clock scaling (%d)\n",
 			mmc_hostname(host), __func__, err);
@@ -1471,7 +1325,7 @@ static int mmc_sd_runtime_suspend(struct mmc_host *host)
 /*
  * Callback for runtime_resume.
  */
-int mmc_sd_runtime_resume(struct mmc_host *host)
+static int mmc_sd_runtime_resume(struct mmc_host *host)
 {
 	int err;
 
@@ -1485,7 +1339,6 @@ int mmc_sd_runtime_resume(struct mmc_host *host)
 
 	return 0;
 }
-EXPORT_SYMBOL(mmc_sd_runtime_resume);
 
 static int mmc_sd_power_restore(struct mmc_host *host)
 {
@@ -1521,10 +1374,6 @@ static const struct mmc_bus_ops mmc_sd_ops = {
 	.power_restore = mmc_sd_power_restore,
 	.alive = mmc_sd_alive,
 	.change_bus_speed = mmc_sd_change_bus_speed,
-#ifdef CONFIG_MMC_PASSWORDS
-	.sysfs_add = mmc_sd_sysfs_add,
-	.sysfs_remove = mmc_sd_sysfs_remove,
-#endif
 };
 
 /*
@@ -1536,7 +1385,6 @@ int mmc_attach_sd(struct mmc_host *host)
 	u32 ocr, rocr;
 #ifdef CONFIG_MMC_PARANOID_SD_INIT
 	int retries;
-	int delayTime;
 #endif
 
 	BUG_ON(!host);
@@ -1576,22 +1424,14 @@ int mmc_attach_sd(struct mmc_host *host)
 	 */
 #ifdef CONFIG_MMC_PARANOID_SD_INIT
 	retries = 5;
-	delayTime = 5;
 	while (retries) {
 		err = mmc_sd_init_card(host, rocr, NULL);
-		if (host->ops->get_cd && host->ops->get_cd(host) == 0) {
-			printk(KERN_ERR "%s(%s): found no card (%d). Stop retrying\n",
-			       __func__, mmc_hostname(host), err);
-			goto err;
-		}
-
 		if (err) {
 			retries--;
 			mmc_power_off(host);
-			usleep_range(delayTime * 1000, delayTime * 1000 + 500);
+			usleep_range(5000, 5500);
 			mmc_power_up(host, rocr);
 			mmc_select_voltage(host, rocr);
-			delayTime *= 2;
 			continue;
 		}
 		break;
@@ -1633,3 +1473,4 @@ err:
 
 	return err;
 }
+

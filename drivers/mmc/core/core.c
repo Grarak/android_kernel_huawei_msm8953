@@ -33,8 +33,6 @@
 #include <linux/pm.h>
 #include <linux/jiffies.h>
 
-#include <linux/wakelock.h>
-
 #include <trace/events/mmc.h>
 
 #include <linux/mmc/card.h>
@@ -52,9 +50,6 @@
 #include "sd_ops.h"
 #include "sdio_ops.h"
 
-#include <linux/debugfs.h>
-#include <chipset_common/bfmr/bfm/chipsets/qcom/bfm_qcom.h>
-
 /* If the device is not responding */
 #define MMC_CORE_TIMEOUT_MS	(10 * 60 * 1000) /* 10 minute timeout */
 
@@ -65,7 +60,6 @@
 #define MMC_BKOPS_MAX_TIMEOUT	(30 * 1000) /* max time to wait in ms */
 
 static struct workqueue_struct *workqueue;
-static struct wake_lock mmc_delayed_work_wake_lock;
 static const unsigned freqs[] = { 400000, 300000, 200000, 100000 };
 
 /*
@@ -75,47 +69,6 @@ static const unsigned freqs[] = { 400000, 300000, 200000, 100000 };
  */
 bool use_spi_crc = 1;
 module_param(use_spi_crc, bool, 0);
-
-static struct dentry *dentry_mmclog;
-u64 rwlog_enable_flag = 0;   /* 0 : Disable , 1: Enable */
-u64 rwlog_index = 0;     /* device index, 0: for emmc */
-int mmc_debug_mask = 0;
-
-static int rwlog_enable_set(void *data, u64 val)
-{
-	rwlog_enable_flag = val;
-	return 0;
-}
-static int rwlog_enable_get(void *data, u64 *val)
-{
-	*val = rwlog_enable_flag;
-	return 0;
-}
-static int rwlog_index_set(void *data, u64 val)
-{
-	rwlog_index = val;
-	return 0;
-}
-static int rwlog_index_get(void *data, u64 *val)
-{
-	*val = rwlog_index;
-	return 0;
-}
-static int debug_mask_set(void *data, u64 val)
-{
-	mmc_debug_mask = (int)val;
-	return 0;
-}
-static int debug_mask_get(void *data, u64 *val)
-{
-	*val = (u64)mmc_debug_mask;
-	return 0;
-}
-
-DEFINE_SIMPLE_ATTRIBUTE(rwlog_enable_fops,rwlog_enable_get, rwlog_enable_set, "%llu\n");
-DEFINE_SIMPLE_ATTRIBUTE(rwlog_index_fops,rwlog_index_get, rwlog_index_set, "%llu\n");
-DEFINE_SIMPLE_ATTRIBUTE(debug_mask_fops,debug_mask_get, debug_mask_set, "%llu\n");
-
 
 /*
  * Internal function. Schedule delayed work in the MMC work queue.
@@ -1025,20 +978,6 @@ mmc_start_request(struct mmc_host *host, struct mmc_request *mrq)
 			 mrq->stop->arg, mrq->stop->flags);
 	}
 
-	if(1 == rwlog_enable_flag) {
-		if(mrq->cmd->opcode == MMC_WRITE_MULTIPLE_BLOCK
-			|| mrq->cmd->opcode == MMC_WRITE_BLOCK
-			|| mrq->cmd->opcode == MMC_READ_MULTIPLE_BLOCK
-			|| mrq->cmd->opcode == MMC_READ_SINGLE_BLOCK) {
-			/* only mmc rw log is output */
-			if(rwlog_index == host->index) {
-				if (mrq->data) {
-					printk("%s:cmd=%d,mrq->data.blocks=%d,index=%d,arg=%x\n",__func__,
-					(int)mrq->cmd->opcode, mrq->data->blocks, host->index, mrq->cmd->arg);
-				}
-			}
-		}
-	}
 	WARN_ON(!host->claimed);
 
 	mrq->cmd->error = 0;
@@ -1080,9 +1019,6 @@ mmc_start_request(struct mmc_host *host, struct mmc_request *mrq)
 	host->ops->request(host, mrq);
 }
 
-static unsigned long cmdq_read_blocks = 0;
-static unsigned long cmdq_write_blocks = 0;
-
 static void mmc_start_cmdq_request(struct mmc_host *host,
 				   struct mmc_request *mrq)
 {
@@ -1099,27 +1035,6 @@ static void mmc_start_cmdq_request(struct mmc_host *host,
 			host->max_req_size);
 		mrq->data->error = 0;
 		mrq->data->mrq = mrq;
-	}
-
-	if(1 == rwlog_enable_flag) {
-		if (mrq->data) {
-			if (mrq->data->flags & MMC_DATA_READ) {
-				cmdq_read_blocks += mrq->data->blocks;
-				printk("mlhxxx-%s:     blk_addr %d blksz %d blocks %d flags %08x tsac %lu ms nsac %d (r blocks %ld)\n",
-				mmc_hostname(host), mrq->cmdq_req->blk_addr, mrq->data->blksz,
-				mrq->data->blocks, mrq->data->flags,
-				mrq->data->timeout_ns / NSEC_PER_MSEC,
-				mrq->data->timeout_clks, cmdq_read_blocks);
-			}
-			if (mrq->data->flags & MMC_DATA_WRITE) {
-				cmdq_write_blocks += mrq->data->blocks;
-				printk("mlhxxx-%s:     blk_addr %d blksz %d blocks %d flags %08x tsac %lu ms nsac %d (w blocks %ld)\n",
-				mmc_hostname(host), mrq->cmdq_req->blk_addr, mrq->data->blksz,
-				mrq->data->blocks, mrq->data->flags,
-				mrq->data->timeout_ns / NSEC_PER_MSEC,
-				mrq->data->timeout_clks, cmdq_write_blocks);
-			}
-		}
 	}
 
 	if (mrq->cmd) {
@@ -1450,6 +1365,7 @@ static void mmc_wait_for_req_done(struct mmc_host *host,
 		wait_for_completion_io(&mrq->completion);
 
 		cmd = mrq->cmd;
+
 		/*
 		 * If host has timed out waiting for the sanitize/bkops
 		 * to complete, card might be still in programming state
@@ -2764,14 +2680,7 @@ void mmc_power_up(struct mmc_host *host, u32 ocr)
 	 * This delay should be sufficient to allow the power supply
 	 * to reach the minimum voltage.
 	 */
-	/*For sdcard we increase delay to 150ms to give rpm more time to operate.*/
-	if(!strcmp(mmc_hostname(host), "mmc1")) {
-		mmc_delay(150);
-	}
-	else {
-		if(!(host->caps2 & MMC_CAP2_REDUCE_RESUME_TIME))
-			mmc_delay(10);
-	}
+	mmc_delay(10);
 
 	host->ios.clock = host->f_init;
 
@@ -2782,9 +2691,7 @@ void mmc_power_up(struct mmc_host *host, u32 ocr)
 	 * This delay must be at least 74 clock sizes, or 1 ms, or the
 	 * time required to reach a stable voltage.
 	 */
-
-	if(!(host->caps2 & MMC_CAP2_REDUCE_RESUME_TIME))
-		mmc_delay(10);
+	mmc_delay(10);
 
 	mmc_host_clk_release(host);
 }
@@ -3597,13 +3504,6 @@ unsigned int mmc_calc_max_discard(struct mmc_card *card)
 		max_trim = mmc_do_calc_max_discard(card, MMC_TRIM_ARG);
 		if (max_trim < max_discard)
 			max_discard = max_trim;
-#ifdef CONFIG_MICRON_EMMC_BUGFIX
-		//Micron eMMC use the ECSD[232] for max_discard calculation.
-		if(mmc_can_discard(card) && card->cid.manfid == CID_MANFID_MICRON)
-		{
-			max_discard = max_trim;
-		}
-#endif
 	} else if (max_discard < card->erase_size) {
 		max_discard = 0;
 	}
@@ -3783,13 +3683,9 @@ static int mmc_rescan_try_freq(struct mmc_host *host, unsigned freq)
 		return 0;
 	if (!mmc_attach_sd(host))
 		return 0;
-	if (!mmc_attach_mmc(host) && !check_bootfail_inject(KERNEL_EMMC_INIT_FAIL))
+	if (!mmc_attach_mmc(host))
 		return 0;
-	else if (host->caps & MMC_CAP_NONREMOVABLE)
-	{
-		qcom_set_boot_fail_flag(KERNEL_EMMC_INIT_FAIL);
-		panic("Boot_monitor detect error:KERNEL_EMMC_INIT_FAI\n");
-	}
+
 	mmc_power_off(host);
 	return -EIO;
 }
@@ -3892,11 +3788,7 @@ void mmc_rescan(struct work_struct *work)
 	 */
 	if (host->bus_ops && !host->bus_dead
 	    && !(host->caps & MMC_CAP_NONREMOVABLE))
-	{
-		wake_lock_timeout(&mmc_delayed_work_wake_lock, (5*HZ));
 		host->bus_ops->detect(host);
-		wake_unlock(&mmc_delayed_work_wake_lock);
-	}
 
 	host->detect_change = 0;
 
@@ -3933,8 +3825,7 @@ void mmc_rescan(struct work_struct *work)
 
  out:
 	if (host->caps & MMC_CAP_NEEDS_POLL)
-		/*set the time of polling to five second.*/
-		mmc_schedule_delayed_work(&host->detect, (5*HZ));
+		mmc_schedule_delayed_work(&host->detect, HZ);
 }
 
 void mmc_start_host(struct mmc_host *host)
@@ -4125,22 +4016,9 @@ int mmc_pm_notify(struct notifier_block *notify_block,
 	case PM_SUSPEND_PREPARE:
 	case PM_RESTORE_PREPARE:
 		spin_lock_irqsave(&host->lock, flags);
-		if (mmc_bus_needs_resume(host)) {
-			spin_unlock_irqrestore(&host->lock, flags);
-			break;
-		}
 		host->rescan_disable = 1;
 		spin_unlock_irqrestore(&host->lock, flags);
-#ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
-		pr_info("%s: deffer resume can't remove detect work when slot change. host->slot_detect_change_flag = %s!\n",
-			mmc_hostname(host), host->slot_detect_change_flag?"true":"false");
-		if((!strcmp(mmc_hostname(host),"mmc1")) && host->slot_detect_change_flag)
-			host->slot_detect_change_flag = false;
-		else
-			cancel_delayed_work_sync(&host->detect);
-#else
 		cancel_delayed_work_sync(&host->detect);
-#endif
 
 		if (!host->bus_ops)
 			break;
@@ -4220,9 +4098,6 @@ static int __init mmc_init(void)
 	if (!workqueue)
 		return -ENOMEM;
 
-	wake_lock_init(&mmc_delayed_work_wake_lock, WAKE_LOCK_SUSPEND,
-	    "mmc_delayed_work");
-
 	ret = mmc_register_bus();
 	if (ret)
 		goto destroy_workqueue;
@@ -4235,15 +4110,6 @@ static int __init mmc_init(void)
 	if (ret)
 		goto unregister_host_class;
 
-	dentry_mmclog = debugfs_create_dir("hw_mmclog", NULL);
-	if(dentry_mmclog ) {
-		debugfs_create_file("rwlog_enable", S_IFREG|S_IRWXU|S_IRGRP|S_IROTH,
-			dentry_mmclog, NULL, &rwlog_enable_fops);
-		debugfs_create_file("rwlog_index", S_IFREG|S_IRWXU|S_IRGRP|S_IROTH,
-			dentry_mmclog, NULL, &rwlog_index_fops);
-		debugfs_create_file("debug_mask", S_IFREG|S_IRWXU|S_IRGRP|S_IROTH,
-			dentry_mmclog, NULL, &debug_mask_fops);
-	}
 	return 0;
 
 unregister_host_class:
@@ -4252,7 +4118,6 @@ unregister_bus:
 	mmc_unregister_bus();
 destroy_workqueue:
 	destroy_workqueue(workqueue);
-	wake_lock_destroy(&mmc_delayed_work_wake_lock);
 
 	return ret;
 }
@@ -4263,7 +4128,6 @@ static void __exit mmc_exit(void)
 	mmc_unregister_host_class();
 	mmc_unregister_bus();
 	destroy_workqueue(workqueue);
-	wake_lock_destroy(&mmc_delayed_work_wake_lock);
 }
 
 subsys_initcall(mmc_init);

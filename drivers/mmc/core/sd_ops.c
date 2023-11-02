@@ -165,6 +165,7 @@ int mmc_send_app_op_cond(struct mmc_host *host, u32 ocr, u32 *rocr)
 		err = mmc_wait_for_app_cmd(host, NULL, &cmd, MMC_CMD_RETRIES);
 		if (err)
 			break;
+
 		/* if we're just probing, do a single pass */
 		if (ocr == 0)
 			break;
@@ -179,7 +180,8 @@ int mmc_send_app_op_cond(struct mmc_host *host, u32 ocr, u32 *rocr)
 		}
 
 		err = -ETIMEDOUT;
-		mmc_delay(18);
+
+		mmc_delay(10);
 	}
 
 	if (!i)

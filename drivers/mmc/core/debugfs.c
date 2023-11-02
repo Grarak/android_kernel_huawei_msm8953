@@ -809,6 +809,7 @@ void mmc_add_card_debugfs(struct mmc_card *card)
 		if (!debugfs_create_file("bkops_stats", S_IRUSR, root, card,
 					 &mmc_dbg_bkops_stats_fops))
 			goto err;
+
 	return;
 
 err:
