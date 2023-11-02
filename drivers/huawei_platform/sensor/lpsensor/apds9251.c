@@ -39,7 +39,6 @@
 #ifdef CONFIG_HUAWEI_HW_DEV_DCT
 #include <linux/hw_dev_dec.h>
 #endif
-#include <misc/app_info.h>
 #include <linux/debugfs.h>
 
 #ifdef CONFIG_HUAWEI_DSM
@@ -1590,11 +1589,6 @@ static int rgb_apds9251_read_device_id(struct i2c_client *client)
 	id &= 0xff;
 	if (id == 0xb2) {
 		APDS9251_INFO("%s: AVAGO APDS9251\n", __func__);
-		err = app_info_set("L-Sensor", "APDS9251");
-		if (err < 0)/*failed to add app_info*/
-		{
-		    APDS9251_ERR("%s %d:failed to add app_info\n", __func__, __LINE__);
-		}
 	} else {
 		APDS9251_INFO("%s: AVAGO APDS9251 Does not exist \n", __func__);
 		return -ENODEV;

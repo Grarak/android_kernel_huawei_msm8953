@@ -36,9 +36,6 @@
 *******************************************************************************/
 #include "focaltech_core.h"
 #include <linux/vmalloc.h>
-#ifdef CONFIG_APP_INFO
-#include <misc/app_info.h>
-#endif /*CONFIG_APP_INFO*/
 
 /*******************************************************************************
 * Private constant and macro definitions using #define
@@ -3968,10 +3965,6 @@ upgrade_failed:
 		dev_err(&client->dev, "threshold read failed");
 	snprintf(AppInfoBuf, 50, "focal8716_tianma_%02d", reg_value);
 	FTS_DBG("focal8716_tianma_%02d", reg_value);
-	err = app_info_set("touch_panel", AppInfoBuf);
-	if (err < 0) {
-		FTS_DBG("app_info_set: set touch_panel failed\n");
-	}
 	return -EIO;
 upgrade_successed:
 no_upgrade:
@@ -3980,9 +3973,5 @@ no_upgrade:
 		dev_err(&client->dev, "threshold read failed");
 	snprintf(AppInfoBuf, 50, "focal8716_tianma_%02d", reg_value);
 	FTS_DBG("focal8716_tianma_%02d", reg_value);
-	err = app_info_set("touch_panel", AppInfoBuf);
-	if (err < 0) {
-		FTS_DBG("app_info_set: set touch_panel failed\n");
-	}
 	return 0;
 }

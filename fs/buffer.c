@@ -1733,7 +1733,8 @@ static int __block_write_full_page(struct inode *inode, struct page *page,
 	struct buffer_head *bh, *head;
 	unsigned int blocksize, bbits;
 	int nr_underway = 0;
-	int write_op = wbc_to_write_cmd(wbc);
+	int write_op = (wbc->sync_mode == WB_SYNC_ALL ?
+			WRITE_SYNC : WRITE);
 
 	head = create_page_buffers(page, inode,
 					(1 << BH_Dirty)|(1 << BH_Uptodate));
@@ -2005,7 +2006,6 @@ int __block_write_begin(struct page *page, loff_t pos, unsigned len,
 	}
 	if (unlikely(err))
 		page_zero_new_buffers(page, from, to);
-
 	return err;
 }
 EXPORT_SYMBOL(__block_write_begin);

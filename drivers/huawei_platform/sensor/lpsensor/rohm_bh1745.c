@@ -45,7 +45,6 @@
 #include <linux/hw_dev_dec.h>
 #endif
 
-#include <misc/app_info.h>
 #include <linux/debugfs.h>
 #ifdef CONFIG_HUAWEI_DSM
 #include 	<dsm/dsm_pub.h>
@@ -1722,11 +1721,6 @@ static int rgb_bh1745_read_device_id(struct i2c_client *client)
 	id &= 0x3f;
 	if (id == 0x0b) {
 		BH1745_INFO("%s: ROHM BH1745\n", __func__);
-		err = app_info_set("L-Sensor", "ROHM BH1745");
-		if (err < 0)/*failed to add app_info*/
-		{
-		    BH1745_ERR("%s %d:failed to add app_info\n", __func__, __LINE__);
-		}
 	} else {
 		BH1745_INFO("%s: ROHM BH1745 Does not exist \n", __func__);
 		return -ENODEV;

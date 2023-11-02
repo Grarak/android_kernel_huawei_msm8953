@@ -21,7 +21,6 @@
 #include <linux/ctype.h>
 #include <linux/hrtimer.h>
 #include <linux/pm_runtime.h>
-//#include <misc/app_info.h>
 #if defined(CONFIG_FB)
 #include <linux/notifier.h>
 #include <linux/fb.h>

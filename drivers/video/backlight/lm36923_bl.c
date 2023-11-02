@@ -19,8 +19,6 @@
 #include <linux/regmap.h>
 #include <linux/backlight.h>
 #include <linux/mfd/lm36923.h>
-#include <misc/app_info.h>
-
 
 #ifdef LM36923_BL_POWER_TEST_ONLY_FOR_KERNEL
 #include <linux/gpio.h>
@@ -736,7 +734,6 @@ static int lm36923_probe(struct i2c_client *client,
 	g_pchip = pchip;
 
 	lm36923_bl_is_used = 1;
-	app_info_set("backlight", "lm36923");
 
 	LM36923_INFO("name: %s, address: (0x%x) ok!\n", client->name, client->addr);
 

@@ -24,11 +24,6 @@
 #include "cyttsp5_core.h"
 #include <linux/firmware.h>
 
-#ifdef CONFIG_HUAWEI_KERNEL
-#ifdef CONFIG_APP_INFO
-#include <misc/app_info.h>
-#endif
-#endif /* CONFIG_HUAWEI_KERNEL */
 #ifdef CONFIG_HUAWEI_DSM
 #include <dsm/dsm_pub.h>
 #endif/*CONFIG_HUAWEI_DSM*/
@@ -1556,41 +1551,6 @@ static DEVICE_ATTR(config_loading, S_IRUSR | S_IWUSR,
 	cyttsp5_config_loading_show, cyttsp5_config_loading_store);
 #endif /* CONFIG_TOUCHSCREEN_CYPRESS_CYTTSP5_MANUAL_TTCONFIG_UPGRADE */
 
-static void cyttsp5_set_app_info(struct device * dev) 
-{
-	
-	char touch_info[APP_INFO_VALUE_LENTH] = {0};
-	char panel_name[PANEL_NAME_LEN_MAX] = {0};
-	int panel_id = UNKNOW_PRODUCT_MODULE;
-	struct cyttsp5_core_data *cd = dev_get_drvdata(dev);
-	struct cyttsp5_cydata *cydata = &cd->sysinfo.cydata;
-	struct cyttsp5_platform_data *pdata = cyttsp5_get_platform_data(dev);
-	struct cyttsp5_core_platform_data *core_pdata = pdata->core_pdata;
-	
-	/* get panel name */
-	panel_id = cyttsp5_get_panel_id(dev);
-	cyttsp5_get_panel_name(panel_name, PANEL_NAME_LEN_MAX - 1, panel_id);
-
-	if ((core_pdata->chip_name) && (strcmp(core_pdata->chip_name, "CS448") == 0)) {
-		snprintf(touch_info, APP_INFO_VALUE_LENTH - 1,
-				"CS448_%s_%d.%d.%d",
-				panel_name,
-				cydata->fw_ver_major,
-				cydata->fw_ver_minor,
-				cydata->fw_ver_conf);
-	} else {
-		snprintf(touch_info, APP_INFO_VALUE_LENTH - 1,
-				"cyttsp5_%s_%d.%d.%d",
-				panel_name,
-				cydata->fw_ver_major,
-				cydata->fw_ver_minor,
-				cydata->fw_ver_conf);
-	}
-#ifdef CONFIG_APP_INFO
-	app_info_set("touch_panel", touch_info);
-#endif
-}
-
 static void cyttsp5_fw_and_config_upgrade(
 		struct work_struct *fw_and_config_upgrade)
 {
@@ -1644,7 +1604,6 @@ static void cyttsp5_fw_and_config_upgrade(
 	} else {
 		tp_log_warning("%s %d:ttconfig haven't upgrade, rc = %d\n", __func__, __LINE__, retVal);
 	}
-	cyttsp5_set_app_info(dev);
 #endif
 }
 

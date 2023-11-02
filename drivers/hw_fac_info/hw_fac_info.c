@@ -82,26 +82,6 @@ static int  fac_info_probe(struct platform_device *pdev)
 	if (ret) {
 		fac_log_err("%s:get software version fail!\n", __func__);
 	}
-	ret = set_sbl1_ver_to_appinfo();
-	if (ret) {
-		fac_log_err("%s:get sbl1 version fail!\n", __func__);
-	}
-	ret = set_hardware_ver_to_appinfo();
-	if (ret) {
-		fac_log_err("%s:get hardware version fail!\n", __func__);
-	}
-	ret = set_appboot_ver_to_appinfo();
-	if (ret) {
-		fac_log_err("%s:get appboot version fail!\n", __func__);
-	}
-	ret = set_product_name_to_appinfo();
-	if (ret) {
-		fac_log_err("%s:get product name fail!\n", __func__);
-	}
-	ret = set_software_ver_to_appinfo();
-	if (ret) {
-		fac_log_err("%s:get software ver fail!\n", __func__);
-	}
 	return ret;
 }
 

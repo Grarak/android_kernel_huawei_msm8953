@@ -30,7 +30,6 @@
 #include <linux/qpnp/qpnp-adc.h>
 #include <linux/completion.h>
 #include <linux/pm_wakeup.h>
-#include <misc/app_info.h>
 #include <linux/power/huawei_charger.h>
 #define _SMB1360_MASK(BITS, POS) \
 	((unsigned char)(((1 << (BITS)) - 1) << (POS)))
@@ -4533,36 +4532,6 @@ static void smb1360_delayed_init_work_fn(struct work_struct *work)
 	}
 }
 
-
-static void smb_add_battype_app_info(u32 batt_id_uv)
-{
-	if (batt_id_uv > BAT_ID_LOW_UV && batt_id_uv < BAT_ID_THRESHOLD_UV) {
-		if (!app_info_set("battery_id", BAT_ID1)) {
-			pr_err("set battery_id ver to app info successfully!\n");
-		} else {
-			pr_debug("set battery_id %s failed!\n", BAT_ID1);
-		}
-	} else if (batt_id_uv >= BAT_ID_THRESHOLD_UV && batt_id_uv < BAT_ID_HIGH_UV) {
-		if (!app_info_set("battery_id", BAT_ID2)) {
-			pr_err("set battery_id ver to app info successfully!\n");
-		} else {
-			pr_err("set battery_id %s failed!\n", BAT_ID2);
-		}
-	}
-}
-
-static void smb_add_smb1360_app_info(u8 version)
-{
-	char ver_buf[20];
-	snprintf(ver_buf,20,"smb1360-%d",version);
-	if(!app_info_set("charger", ver_buf)) {
-		pr_err("set smb1360 version successfully!\n");
-	} else {
-		pr_debug("set smb1360 version failed!\n");
-	}
-}
-
-
 static int smb_parse_batt_id(struct smb1360_chip *chip)
 {
 
@@ -5351,8 +5320,6 @@ static int smb1360_probe(struct i2c_client *client,
 		}
 		enable_irq_wake(client->irq);
 	}
-	smb_add_battype_app_info(chip->connected_rid);
-	smb_add_smb1360_app_info(chip->revision);
 	chip->debug_root = debugfs_create_dir("smb1360", NULL);
 	if (!chip->debug_root)
 		dev_err(chip->dev, "Couldn't create debug dir\n");

@@ -50,10 +50,6 @@ static int ilitek_set_appinfo(unsigned char firmware_ver[4])
 		firmware_ver[1],
 		firmware_ver[2],
 		firmware_ver[3]);
-	ret = app_info_set("touch_panel", touch_info);
-	if (ret < 0) {
-		tp_log_err("%s(line %d): error,ret=%d\n",__func__,__LINE__,ret);
-	}
 	return ret;
 }
 

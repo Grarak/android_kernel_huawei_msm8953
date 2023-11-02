@@ -31,9 +31,6 @@
 #include <linux/vmalloc.h>
 #include "synaptics_dsx.h"
 #include "synaptics_dsx_i2c.h"
-#ifdef CONFIG_APP_INFO
-#include <misc/app_info.h>
-#endif /*CONFIG_APP_INFO*/
 
 #include "synaptics_dsx_esd.h"
 
@@ -759,21 +756,8 @@ int synaptics_s3718_set_appinfo(struct synaptics_rmi4_data *rmi4_data)
 	module_name,
 	s3718_config_id[2],
 	s3718_config_id[3]);
-
-	ret = app_info_set("touch_panel", touch_s3718_info);
-	if (ret < 0) 
-	{
-		tp_log_err("%s(line %d): error,ret=%d\n",__func__,__LINE__,ret);
-		goto exit;
-	}
 	return 0;
 exit:
-	ret = app_info_set("touch_panel", "synaptics_S3718_X.X");
-	if (ret < 0)
-	{
-		tp_log_err("%s(line %d): app_info_set fail,ret=%d\n"
-				,__func__,__LINE__,ret);
-	}
 	return 0;
 }
 
@@ -2348,9 +2332,6 @@ static ssize_t fwu_sysfs_do_reflash_store(struct device *dev,
 			tp_log_info("%s:successfully s3718 update fw\n",__func__);
 		}
 	}
-#ifdef CONFIG_APP_INFO
-	synaptics_s3718_set_appinfo(fwu->rmi4_data);
-#endif
 	pm_runtime_put(&fwu->rmi4_data->i2c_client->dev);
 
 	retval = count;
@@ -3397,9 +3378,6 @@ static void fwu_startup_fw_s3718_update_work(struct work_struct *work)
 	}
 exit:
 	fwu->rmi4_data->firmware_updating = false;
-#ifdef CONFIG_APP_INFO
-	synaptics_s3718_set_appinfo(fwu->rmi4_data);
-#endif
 	pm_runtime_put(&fwu->rmi4_data->i2c_client->dev);
 
 	if (fwu && fwu->fw_entry_boot) {

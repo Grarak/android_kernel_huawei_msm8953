@@ -41,8 +41,6 @@
 #include <linux/hw_dev_dec.h>
 #endif
 
-#include <misc/app_info.h>
-
 #include <linux/debugfs.h>
 
 #undef CONFIG_HUAWEI_DSM
@@ -1212,13 +1210,7 @@ static int apds9110_read_device_id(struct i2c_client *client)
 	int id;
 	int err;
 	id = apds9110_i2c_read(client, APDS9110_DD_PART_ID_ADDR,APDS9110_I2C_BYTE);
-	if (id == 0xb1) {
-		err = app_info_set("P-Sensor", "APDS9110");
-		if (err < 0)/*failed to add app_info*/
-		{
-			APDS9110_ERR("%s %d:failed to add app_info\n", __func__, __LINE__);
-		}
-	} else {
+	if (id != 0xb1) {
 		APDS9110_INFO("%s:No apds9110 id(%d)\n", __func__,id);
 		return -ENODEV;
 	}

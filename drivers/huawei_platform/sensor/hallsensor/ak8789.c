@@ -58,7 +58,6 @@
 #ifdef CONFIG_HUAWEI_DSM
 //#include <linux/dsm_pub.h>
 #endif
-#include <misc/app_info.h>
 
 /*prevent shake time is AKM8789_TIMER_DEBOUNCE*/
 /*AKM8789_WAKEUP_TIME is for wake_lock_timeout()*/
@@ -988,11 +987,6 @@ int hall_pf_probe(struct platform_device *pdev)
 		goto err_free_sensor_class;
 	}
 
-	err = app_info_set("Hall", "AKM8789");
-	if (err)
-	{
-		AK8789_ERRMSG("%s, line %d:set AK8789 app_info error", __func__, __LINE__);
-	}
 	AK8789_WARNMSG("probe successfully!");
 	return err;
 

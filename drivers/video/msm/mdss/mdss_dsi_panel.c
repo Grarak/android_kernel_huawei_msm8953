@@ -36,7 +36,6 @@
 #include <linux/hw_lcd_common.h>
 #include <huawei_platform/touchscreen/hw_tp_common.h>
 #include <hw_lcd_debug.h>
-#include <misc/app_info.h>
 int lcd_debug_mask = LCD_INFO;
 module_param_named(lcd_debug_mask, lcd_debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP);
 static bool enable_initcode_debugging = FALSE;
@@ -3306,7 +3305,6 @@ int mdss_dsi_panel_init(struct device_node *node,
 		panel_name = "default lcd";
 		LCD_LOG_INFO("Do not support expect LCD module type, LCD name is %s\n",panel_name);
 	}
-	rc = app_info_set(info_node, panel_name);
 #endif
 	rc = mdss_panel_parse_dt(node, ctrl_pdata);
 #ifdef CONFIG_HUAWEI_KERNEL_LCD

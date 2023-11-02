@@ -32,7 +32,6 @@
 #include <linux/delay.h>
 #include <linux/ratelimit.h>
 #include <linux/pm_runtime.h>
-#include <check_root.h>
 #include <linux/wbt.h>
 #define CREATE_TRACE_POINTS
 #include <trace/events/block.h>
@@ -2061,10 +2060,6 @@ void submit_bio(int rw, struct bio *bio)
 			task_io_account_read(bio->bi_iter.bi_size);
 			count_vm_events(PGPGIN, count);
 		}
-
-#ifdef DCHECK_ROOT_FORCE
-		check_wrt(rw, bio);
-#endif
 
 		if (unlikely(block_dump)) {
 			char b[BDEVNAME_SIZE];

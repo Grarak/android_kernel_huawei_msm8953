@@ -478,41 +478,6 @@ int mdss_panel_parse_bl_settings(struct device_node *np,
 	return 0;
 }
 
-int lcdkit_app_info_set(struct mdss_panel_info *pinfo)
-{
-    int rc = 0;
-   	static const char *panel_name;
-    static const char *info_node = "lcd type";
-
-	pinfo->panel_name[0] = '\0';
-	//panel_name = of_get_property(node, LCKDIT_PANEL_PARSE_STRING, NULL);
-	panel_name = lcdkit_info.panel_infos.panel_name;
-	if (!panel_name) {
-		LCDKIT_INFO("%d, Panel name not specified\n", __LINE__);
-        return -EINVAL;
-	} else {
-		LCDKIT_INFO("Panel Name = %s\n", panel_name);
-		strlcpy(&pinfo->panel_name[0], panel_name, MDSS_MAX_PANEL_LEN);
-	}
-
-	default_panel_name = panel_name;
-	if(!strcmp(default_panel_name,"AUO_OTM1901A 5.2' VIDEO TFT 1080 x 1920 DEFAULT"))
-	{
-		panel_name = "default lcd";
-		LCDKIT_INFO("Do not support expect LCD module type, LCD name is %s\n",
-                    panel_name);
-	}
-
-	rc = app_info_set(info_node, panel_name);
-	if (rc) {
-		LCDKIT_ERR(":%d panel dt parse failed\n", __LINE__);
-		return rc;
-	}
-
-    return 0;
-
-}
-
 static void mdss_dsi_parse_esd_params(struct device_node *np,
 	struct mdss_dsi_ctrl_pdata *ctrl)
 {
@@ -980,12 +945,6 @@ int mdss_dsi_panel_init(struct device_node *node,
 	pr_debug("%s:%d\n", __func__, __LINE__);
 
     lcdkit_init(node, ctrl_pdata);
-
-    rc = lcdkit_app_info_set(pinfo);
-	if (rc) {
-		pr_err("%s:%d set panel app_info failed\n", __func__, __LINE__);
-		return rc;
-	}
 
 	pinfo->dynamic_switch_pending = false;
 	pinfo->is_lpm_mode = false;

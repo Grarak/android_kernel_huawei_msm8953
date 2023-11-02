@@ -27,7 +27,6 @@ Problem NO.         Name        Time         Reason
 #include <linux/err.h>
 #include <linux/sensors.h>
 #include <linux/module.h>
-#include <misc/app_info.h>
 
 static int sns_dt_debug_mask= 1;
 

@@ -43,8 +43,6 @@
 #include <linux/hw_dev_dec.h>
 #endif
 
-#include <misc/app_info.h>
-
 #include <linux/debugfs.h>
 #include <linux/kernel.h>
 #ifdef CONFIG_HUAWEI_DSM
@@ -2484,12 +2482,6 @@ static int txc_pa2240_probe(struct i2c_client *client,
 	err=txc_pa2240_irq_init(data,client);
 	if(err)
 		goto exit_unregister_sensorclass;
-
-	err = app_info_set("P-Sensor", "TXC PA2240");
-	if (err < 0)/*failed to add app_info*/
-	{
-	    TXC_PA2240_ERR("%s %d:failed to add app_info\n", __func__, __LINE__);
-	}
 
 	//set_sensors_list(P_SENSOR);
 #ifdef CONFIG_HUAWEI_HW_DEV_DCT

@@ -19,7 +19,6 @@
 #include "msm_camera_dt_util.h"
 #include "msm_camera_io_util.h"
 
-#include "misc/app_info.h"
 #ifdef CONFIG_HUAWEI_HW_DEV_DCT
 #include <linux/hw_dev_dec.h>
 #endif
@@ -1083,15 +1082,6 @@ CSID_TG:
 		pr_err("%s have no otp drivers", slave_info->sensor_name);
 	}
 	pr_err("%s probe succeeded", slave_info->sensor_name);
-	if (CAMERA_0 == slave_info->camera_id){
-		rc = app_info_set("camera_main", slave_info->sensor_name);
-	}
-	else if (CAMERA_2 == slave_info->camera_id){
-		rc = app_info_set("camera_slave", slave_info->sensor_name);
-	}
-	else{
-		pr_err("%s app_info_set id err", slave_info->sensor_name);
-	}
 #ifdef CONFIG_HUAWEI_HW_DEV_DCT
 	if(CAMERA_0 == slave_info->camera_id) //detet main senor or sub sensor
 	{
@@ -1652,15 +1642,15 @@ static int pt_test_set_camera_power(struct msm_camera_power_ctrl_t *power_info, 
 /*bit0: 1->power up, 0->power off*/
 /********for milan**************/
 /*main camera power*/
-/*bit1: DVDD£ºL2*/
-/*bit2: AF_AVDD£ºL17*/
-/*bit3: AVDD£ºL22*/
-/*bit4: VREG_DOVDD_1P8£ºGPIO134*/
+/*bit1: DVDDï¿½ï¿½L2*/
+/*bit2: AF_AVDDï¿½ï¿½L17*/
+/*bit3: AVDDï¿½ï¿½L22*/
+/*bit4: VREG_DOVDD_1P8ï¿½ï¿½GPIO134*/
 
 /*slave camera power*/
-/*bit5: DVDD£ºL23*/
-/*bit6: AVDD£ºGPIO128*/
-/*bit7: VREG_DOVDD_1P8£ºGPIO134*/
+/*bit5: DVDDï¿½ï¿½L23*/
+/*bit6: AVDDï¿½ï¿½GPIO128*/
+/*bit7: VREG_DOVDD_1P8ï¿½ï¿½GPIO134*/
 int ctrl_camera_power_status(int pt_action_value)
 {
     struct msm_sensor_ctrl_t  *s_ctrl_all[2] = {0};

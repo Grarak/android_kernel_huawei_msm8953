@@ -29,9 +29,6 @@
 #include "synaptics_dsx.h"
 #include "synaptics_dsx_i2c.h"
 #ifdef CONFIG_HUAWEI_KERNEL
-#ifdef CONFIG_APP_INFO
-#include <misc/app_info.h>
-#endif /*CONFIG_APP_INFO*/
 #ifdef CONFIG_HUAWEI_DSM
 #include <dsm/dsm_pub.h>
 #endif/*CONFIG_HUAWEI_DSM*/
@@ -1518,11 +1515,6 @@ static void synaptics_set_appinfo(void)
 	if (ret < 0) {
 		tp_log_err("%s(line %d):Failed to read device config ID,ret=%d\n",
 				__func__,__LINE__, ret);
-		/*add the TP app_info for pass the mmi test*/
-		ret = app_info_set("touch_panel", "synaptics_dsx_X.X");
-		if (ret < 0) {
-			tp_log_err("%s(line %d): error,ret=%d\n",__func__,__LINE__,ret);
-		}
 		goto exit;
 	}
 	device_config_id = extract_uint_be(config_id);
@@ -1544,14 +1536,6 @@ static void synaptics_set_appinfo(void)
 		get_cof_module_name(fwu->product_id),
 		config_id[2],
 		config_id[3]);
-
-#ifdef CONFIG_APP_INFO
-	ret = app_info_set("touch_panel", touch_info);
-	if (ret < 0) {
-		tp_log_err("%s(line %d): error,ret=%d\n",__func__,__LINE__,ret);
-		goto exit;
-	}
-#endif /*CONFIG_APP_INFO*/
 
 exit:
 	return;
@@ -2146,9 +2130,6 @@ exit:
 static int synaptics_rmi4_fwu_init(struct synaptics_rmi4_data *rmi4_data)
 {
 	int retval;
-#ifdef CONFIG_APP_INFO
-	int ret = 0;
-#endif /*CONFIG_APP_INFO*/
 	int attr_count;
 	struct pdt_properties pdt_props;
 
@@ -2294,15 +2275,6 @@ exit_free_fwu:
 	fwu = NULL;
 
 exit:
-	/* In case that capci-test can not find app_info */
-#ifdef CONFIG_APP_INFO
-	ret = app_info_set("touch_panel", "synaptics_dsx_X.X");
-	if (ret < 0)
-	{
-		tp_log_err("%s(line %d): app_info_set fail,ret=%d\n"
-				,__func__,__LINE__,ret);
-	}
-#endif /*CONFIG_APP_INFO*/
 	return retval;
 }
 static void synaptics_rmi4_fwu_remove(struct synaptics_rmi4_data *rmi4_data)
