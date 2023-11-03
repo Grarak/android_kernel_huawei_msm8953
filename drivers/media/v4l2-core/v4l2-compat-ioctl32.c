@@ -505,6 +505,16 @@ static int get_v4l2_buffer32(struct v4l2_buffer __user *kp,
 				   &up->timestamp.tv_usec))
 			return -EFAULT;
 
+	if (V4L2_TYPE_IS_PRIVATE(kp->type)) {
+		compat_long_t tmp;
+
+		if (get_user(kp->length, &up->length) ||
+				get_user(tmp, &up->m.userptr))
+			return -EFAULT;
+
+		kp->m.userptr = (unsigned long)compat_ptr(tmp);
+	}
+
 	if (V4L2_TYPE_IS_MULTIPLANAR(type)) {
 		u32 num_planes = length;
 

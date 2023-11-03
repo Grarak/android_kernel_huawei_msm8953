@@ -338,6 +338,7 @@ static ssize_t regulator_uV_show(struct device *dev,
 
 	return ret;
 }
+
 static DEVICE_ATTR(microvolts, 0444, regulator_uV_show, NULL);
 
 static ssize_t regulator_uA_show(struct device *dev,

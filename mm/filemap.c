@@ -1903,10 +1903,14 @@ int filemap_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 		 * We found the page, so try async readahead before
 		 * waiting for the lock.
 		 */
+		task_set_in_pagefault(current);
 		do_async_mmap_readahead(vma, ra, file, page, offset);
+		task_clear_in_pagefault(current);
 	} else if (!page) {
 		/* No page in the page cache at all */
+		task_set_in_pagefault(current);
 		do_sync_mmap_readahead(vma, ra, file, offset);
+		task_clear_in_pagefault(current);
 		count_vm_event(PGMAJFAULT);
 		mem_cgroup_count_vm_event(vma->vm_mm, PGMAJFAULT);
 		ret = VM_FAULT_MAJOR;
@@ -1955,7 +1959,9 @@ no_cached_page:
 	 * We're only likely to ever get here if MADV_RANDOM is in
 	 * effect.
 	 */
+	task_set_in_pagefault(current);
 	error = page_cache_read(file, offset);
+	task_clear_in_pagefault(current);
 
 	/*
 	 * The page we want has now been added to the page cache.
@@ -1982,7 +1988,9 @@ page_not_uptodate:
 	 * and we need to check for errors.
 	 */
 	ClearPageError(page);
+	task_set_in_pagefault(current);
 	error = mapping->a_ops->readpage(file, page);
+	task_clear_in_pagefault(current);
 	if (!error) {
 		wait_on_page_locked(page);
 		if (!PageUptodate(page))

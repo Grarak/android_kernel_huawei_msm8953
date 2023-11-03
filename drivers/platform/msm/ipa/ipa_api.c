@@ -1998,6 +1998,7 @@ int ipa_qmi_disable_force_clear_datapath_send(
 }
 
 int ipa_generate_tag_process(void)
+
 {
 	int ret;
 
@@ -2132,6 +2133,7 @@ int ipa_uc_mhi_print_stats(char *dbg_buff, int size)
 {
 	int ret;
 
+
 	IPA_API_DISPATCH_RETURN(ipa_uc_mhi_print_stats, dbg_buff, size);
 
 	return ret;
@@ -2148,7 +2150,9 @@ int ipa_uc_state_check(void)
 {
 	int ret;
 
+
 	IPA_API_DISPATCH_RETURN(ipa_uc_state_check);
+
 
 	return ret;
 }

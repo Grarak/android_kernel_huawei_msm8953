@@ -177,6 +177,7 @@ static ssize_t nfc_read(struct file *filp, char __user *buf,
 			ret = -EAGAIN;
 			goto err;
 		}
+
 		while (1) {
 			ret = 0;
 			if (!nqx_dev->irq_enabled) {
@@ -198,6 +199,7 @@ static ssize_t nfc_read(struct file *filp, char __user *buf,
 	}
 
 	tmp = nqx_dev->kbuf;
+
 	if (!tmp) {
 		dev_err(&nqx_dev->client->dev,
 			"%s: device doesn't exist anymore\n", __func__);
@@ -243,6 +245,7 @@ static ssize_t nfc_write(struct file *filp, const char __user *buf,
 				size_t count, loff_t *offset)
 {
 	struct nqx_dev *nqx_dev = filp->private_data;
+
 	char *tmp = NULL;
 	int ret = 0;
 
@@ -250,6 +253,7 @@ static ssize_t nfc_write(struct file *filp, const char __user *buf,
 		ret = -ENODEV;
 		goto out;
 	}
+
 	if (count > nqx_dev->kbuflen) {
 		dev_err(&nqx_dev->client->dev, "%s: out of memory\n",
 			__func__);
@@ -258,6 +262,7 @@ static ssize_t nfc_write(struct file *filp, const char __user *buf,
 	}
 
 	tmp = memdup_user(buf, count);
+
 	if (IS_ERR(tmp)) {
 		dev_err(&nqx_dev->client->dev, "%s: memdup_user failed\n",
 			__func__);
@@ -279,6 +284,7 @@ static ssize_t nfc_write(struct file *filp, const char __user *buf,
 			tmp[0], tmp[1], tmp[2]);
 #endif
 	usleep_range(1000, 1100);
+
 out_free:
 	kfree(tmp);
 out:
@@ -913,6 +919,7 @@ static int nqx_probe(struct i2c_client *client,
 			goto err_en_gpio;
 		}
 	} else {
+
 		dev_err(&client->dev,
 		"%s: nfc reset gpio not provided\n", __func__);
 		goto err_mem;
@@ -921,6 +928,7 @@ static int nqx_probe(struct i2c_client *client,
 	if (gpio_is_valid(platform_data->irq_gpio)) {
 		r = gpio_request(platform_data->irq_gpio, "nfc_irq_gpio");
 		if (r) {
+
 			dev_err(&client->dev, "%s: unable to request nfc irq gpio [%d]\n",
 				__func__, platform_data->irq_gpio);
 			goto err_en_gpio;
@@ -928,6 +936,7 @@ static int nqx_probe(struct i2c_client *client,
 		r = gpio_direction_input(platform_data->irq_gpio);
 		if (r) {
 			dev_err(&client->dev,
+
 			"%s: unable to set direction for nfc irq gpio [%d]\n",
 				__func__,
 				platform_data->irq_gpio);
@@ -975,6 +984,7 @@ static int nqx_probe(struct i2c_client *client,
 			/* ese gpio optional so we should continue */
 		} else {
 			nqx_dev->ese_gpio = platform_data->ese_gpio;
+			/* ese gpio optional so we should continue */
 			r = gpio_direction_output(platform_data->ese_gpio, 0);
 			if (r) {
 				/* free ese gpio and set invalid
@@ -1081,6 +1091,7 @@ static int nqx_probe(struct i2c_client *client,
 	}
 	gpio_set_value(platform_data->en_gpio, 1);
 #endif
+
 	device_init_wakeup(&client->dev, true);
 	device_set_wakeup_capable(&client->dev, true);
 	i2c_set_clientdata(client, nqx_dev);

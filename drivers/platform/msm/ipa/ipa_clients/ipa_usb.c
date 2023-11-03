@@ -184,7 +184,9 @@ struct ipa3_usb_context {
 		ttype_ctx[IPA_USB_TRANSPORT_MAX];
 	struct dentry *dfile_state_info;
 	struct dentry *dent;
+
 	struct ipa3_usb_smmu_reg_map smmu_reg_map;
+
 };
 
 enum ipa3_usb_op {

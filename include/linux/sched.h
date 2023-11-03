@@ -133,6 +133,9 @@ struct fs_struct;
 struct perf_event_context;
 struct blk_plug;
 struct filename;
+#ifdef CONFIG_HW_CGROUP_PIDS
+struct group_pids;
+#endif
 
 #define VMACACHE_BITS 2
 #define VMACACHE_SIZE (1U << VMACACHE_BITS)
@@ -1629,6 +1632,10 @@ struct task_struct {
 	/* cg_list protected by css_set_lock and tsk->alloc_lock */
 	struct list_head cg_list;
 #endif
+#ifdef CONFIG_HW_CGROUP_PIDS
+	struct list_head group_pids_list;
+	struct group_pids *group_pids;
+#endif
 #ifdef CONFIG_FUTEX
 	struct robust_list_head __user *robust_list;
 #ifdef CONFIG_COMPAT
@@ -2142,6 +2149,9 @@ static inline void memalloc_noio_restore(unsigned int flags)
 #define PFA_SPREAD_PAGE  1      /* Spread page cache over cpuset */
 #define PFA_SPREAD_SLAB  2      /* Spread some slab caches over cpuset */
 
+#define PFA_SLEEP_ON_THROTL	25
+#define PFA_FLUSHER		26
+#define PFA_IN_PAGEFAULT	27
 
 #define TASK_PFA_TEST(name, func)					\
 	static inline bool task_##func(struct task_struct *p)		\
@@ -2163,6 +2173,18 @@ TASK_PFA_CLEAR(SPREAD_PAGE, spread_page)
 TASK_PFA_TEST(SPREAD_SLAB, spread_slab)
 TASK_PFA_SET(SPREAD_SLAB, spread_slab)
 TASK_PFA_CLEAR(SPREAD_SLAB, spread_slab)
+
+TASK_PFA_TEST(SLEEP_ON_THROTL, sleep_on_throtl)
+TASK_PFA_SET(SLEEP_ON_THROTL, sleep_on_throtl)
+TASK_PFA_CLEAR(SLEEP_ON_THROTL, sleep_on_throtl)
+
+TASK_PFA_TEST(FLUSHER, flusher)
+TASK_PFA_SET(FLUSHER, flusher)
+TASK_PFA_CLEAR(FLUSHER, flusher)
+
+TASK_PFA_TEST(IN_PAGEFAULT, in_pagefault)
+TASK_PFA_SET(IN_PAGEFAULT, in_pagefault)
+TASK_PFA_CLEAR(IN_PAGEFAULT, in_pagefault)
 
 /*
  * task->jobctl flags

@@ -611,6 +611,9 @@ static void cnss_disable_xtal_ldo(struct platform_device *pdev)
 		regulator_put(info->wlan_reg_xtal);
 	}
 
+
+
+
 	if (info->wlan_reg_xtal_aon) {
 		regulator_disable(info->wlan_reg_xtal_aon);
 		regulator_put(info->wlan_reg_xtal_aon);
@@ -1981,6 +1984,8 @@ void cnss_schedule_recovery_work(void)
 }
 EXPORT_SYMBOL(cnss_schedule_recovery_work);
 
+
+
 static inline void __cnss_disable_irq(void *data)
 {
 	struct pci_dev *pdev = data;
@@ -2393,8 +2398,8 @@ again:
 
 		ret = wdrv->probe(pdev, penv->id);
 		if (ret) {
-			wcnss_prealloc_check_memory_leak();
-			wcnss_pre_alloc_reset();
+				wcnss_prealloc_check_memory_leak();
+				wcnss_pre_alloc_reset();
 
 			if (probe_again > 3) {
 				pr_err("Failed to probe WLAN\n");
@@ -2479,8 +2484,8 @@ void cnss_wlan_unregister_driver(struct cnss_wlan_driver *driver)
 	if (wdrv->remove)
 		wdrv->remove(pdev);
 
-	wcnss_prealloc_check_memory_leak();
-	wcnss_pre_alloc_reset();
+		wcnss_prealloc_check_memory_leak();
+		wcnss_pre_alloc_reset();
 
 	cnss_msm_pcie_deregister_event(&penv->event_reg);
 

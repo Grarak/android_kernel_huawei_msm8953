@@ -76,6 +76,7 @@
 #include <linux/string.h>
 #include <linux/uaccess.h>
 #include <uapi/linux/limits.h>
+#include <linux/uaccess.h>
 
 #include "audit.h"
 
@@ -1186,7 +1187,6 @@ static void audit_log_execve_info(struct audit_context *context,
 out:
 	kfree(buf_head);
 }
-
 static void show_special(struct audit_context *context, int *call_panic)
 {
 	struct audit_buffer *ab;

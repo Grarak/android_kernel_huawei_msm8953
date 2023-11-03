@@ -1027,6 +1027,9 @@ port_fail:
 mem_fail:
 	list_for_each_safe(ptr, next, &swrm->mport_list) {
 		mport = list_entry(ptr, struct swrm_mports, list);
+		if (!mport)
+			continue;
+
 		for (i = 0; i < portinfo->num_port; i++) {
 			if (portinfo->port_id[i] == mstr_ports[mport->id]) {
 				port = swrm_get_port(master,

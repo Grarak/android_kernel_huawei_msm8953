@@ -55,6 +55,10 @@
 #include <linux/shm.h>
 #include <linux/kcov.h>
 
+#ifdef CONFIG_HUAWEI_BOOST_SIGKILL_FREE
+#include <linux/boost_sigkill_free.h>
+#endif
+
 #include <asm/uaccess.h>
 #include <asm/unistd.h>
 #include <asm/pgtable.h>
@@ -852,7 +856,6 @@ void do_exit(long code)
 	 */
 	smp_mb();
 	raw_spin_unlock_wait(&tsk->pi_lock);
-
 	/* causes final put_task_struct in finish_task_switch(). */
 	tsk->state = TASK_DEAD;
 	tsk->flags |= PF_NOFREEZE;	/* tell freezer to ignore us */
@@ -905,6 +908,11 @@ do_group_exit(int exit_code)
 		}
 		spin_unlock_irq(&sighand->siglock);
 	}
+
+#ifdef CONFIG_HUAWEI_BOOST_SIGKILL_FREE
+	if (sysctl_boost_sigkill_free && sig_kernel_kill(exit_code))
+		fast_free_user_mem();
+#endif
 
 	do_exit(exit_code);
 	/* NOTREACHED */

@@ -34,6 +34,16 @@
 #include "mdss_dsi_phy.h"
 #include "mdss_dba_utils.h"
 
+#ifdef CONFIG_LCDKIT_DRIVER
+#include "lcdkit_dsi.h"
+#else
+#ifdef CONFIG_HUAWEI_KERNEL_LCD
+#include <linux/hw_lcd_common.h>
+bool enable_PT_test = 0;
+module_param_named(enable_PT_test, enable_PT_test, bool, S_IRUGO | S_IWUSR);
+#endif
+#endif
+
 #define XO_CLK_RATE	19200000
 #define CMDLINE_DSI_CTL_NUM_STRING_LEN 2
 
@@ -43,7 +53,16 @@ static struct mdss_dsi_data *mdss_dsi_res;
 #define DSI_DISABLE_PC_LATENCY 100
 #define DSI_ENABLE_PC_LATENCY PM_QOS_DEFAULT_VALUE
 
+#ifndef CONFIG_LCDKIT_DRIVER
+#ifdef CONFIG_HUAWEI_KERNEL_LCD
+struct mdss_panel_data *global_pdata = NULL;
+#endif
+#endif
+
 static struct pm_qos_request mdss_dsi_pm_qos_request;
+
+
+extern ssize_t Is_lm36923_used(void);
 
 static void mdss_dsi_pm_qos_add_request(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 {
@@ -272,6 +291,7 @@ static int mdss_dsi_regulator_init(struct platform_device *pdev,
 	return rc;
 }
 
+#ifndef CONFIG_LCDKIT_DRIVER
 static int mdss_dsi_panel_power_off(struct mdss_panel_data *pdata)
 {
 	int ret = 0;
@@ -346,7 +366,7 @@ static int mdss_dsi_panel_power_on(struct mdss_panel_data *pdata)
 
 	return ret;
 }
-
+#endif
 static int mdss_dsi_panel_power_lp(struct mdss_panel_data *pdata, int enable)
 {
 	/* Panel power control when entering/exiting lp mode */
@@ -1234,6 +1254,12 @@ static int mdss_dsi_off(struct mdss_panel_data *pdata, int power_state)
 		return -EINVAL;
 	}
 
+#ifdef CONFIG_LCDKIT_DRIVER
+#ifdef CONFIG_HUAWEI_DSM
+	lcd_pwr_status.panel_power_on = 0;
+#endif
+#endif
+
 	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
 
@@ -1408,6 +1434,10 @@ int mdss_dsi_on(struct mdss_panel_data *pdata)
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
 	int cur_power_state;
 
+#if defined(CONFIG_HUAWEI_KERNEL_LCD) || defined(CONFIG_LCDKIT_DRIVER)
+	unsigned long timeout = jiffies;
+#endif
+
 	if (pdata == NULL) {
 		pr_err("%s: Invalid input data\n", __func__);
 		return -EINVAL;
@@ -1482,6 +1512,15 @@ int mdss_dsi_on(struct mdss_panel_data *pdata)
 			  MDSS_DSI_LINK_CLK, MDSS_DSI_CLK_ON);
 	mdss_dsi_sw_reset(ctrl_pdata, true);
 
+#ifndef CONFIG_LCDKIT_DRIVER
+#ifdef CONFIG_HUAWEI_KERNEL_LCD
+	LCD_LOG_INFO("%s: dsi_on_time = %u\n",
+			__func__,jiffies_to_msecs(jiffies-timeout));
+#endif
+#else
+    LCDKIT_INFO(": dsi_on_time = %u\n", jiffies_to_msecs(jiffies-timeout));
+#endif
+
 	/*
 	 * Issue hardware reset line after enabling the DSI clocks and data
 	 * data lanes for LP11 init
@@ -1491,6 +1530,12 @@ int mdss_dsi_on(struct mdss_panel_data *pdata)
 			pr_debug("reset enable: pinctrl not enabled\n");
 		mdss_dsi_panel_reset(pdata, 1);
 	}
+
+#ifdef CONFIG_LCDKIT_DRIVER
+#ifdef CONFIG_HUAWEI_DSM
+	lcd_pwr_status.panel_power_on = 1;
+#endif
+#endif
 
 	if (mipi->init_delay)
 		usleep_range(mipi->init_delay, mipi->init_delay);
@@ -2833,7 +2878,11 @@ static struct device_node *mdss_dsi_find_panel_of_node(
 	char ctrl_id_stream[3] =  "0:";
 	char *str1 = NULL, *str2 = NULL, *override_cfg = NULL;
 	char cfg_np_name[MDSS_MAX_PANEL_LEN] = "";
-	struct device_node *dsi_pan_node = NULL, *mdss_node = NULL;
+	#ifdef CONFIG_LCDKIT_DRIVER
+    struct device_node *dsi_pan_node = NULL;
+    #else
+    struct device_node *dsi_pan_node = NULL, *mdss_node = NULL;
+    #endif
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = platform_get_drvdata(pdev);
 	struct mdss_panel_info *pinfo = &ctrl_pdata->panel_data.panel_info;
 
@@ -2893,6 +2942,7 @@ static struct device_node *mdss_dsi_find_panel_of_node(
 		if (!strcmp(panel_name, NONE_PANEL))
 			goto exit;
 
+        #ifndef CONFIG_LCDKIT_DRIVER
 		mdss_node = of_parse_phandle(pdev->dev.of_node,
 			"qcom,mdss-mdp", 0);
 		if (!mdss_node) {
@@ -2901,6 +2951,9 @@ static struct device_node *mdss_dsi_find_panel_of_node(
 			return NULL;
 		}
 		dsi_pan_node = of_find_node_by_name(mdss_node, panel_name);
+        #else
+        dsi_pan_node = of_find_node_by_name(pdev->dev.of_node, panel_name);
+        #endif
 		if (!dsi_pan_node) {
 			pr_err("%s: invalid pan node \"%s\"\n",
 			       __func__, panel_name);
@@ -3101,6 +3154,13 @@ static int mdss_dsi_cont_splash_config(struct mdss_panel_info *pinfo,
 			pr_err("%s: Panel power on failed\n", __func__);
 			return rc;
 		}
+
+#ifdef CONFIG_LCDKIT_DRIVER
+#ifdef CONFIG_HUAWEI_DSM
+		lcd_pwr_status.panel_power_on = 1;
+#endif
+#endif
+
 		if (ctrl_pdata->bklt_ctrl == BL_PWM)
 			mdss_dsi_panel_pwm_enable(ctrl_pdata);
 		ctrl_pdata->ctrl_state |= (CTRL_STATE_PANEL_INIT |
@@ -3179,6 +3239,13 @@ static int mdss_dsi_ctrl_probe(struct platform_device *pdev)
 	static int te_irq_registered;
 	struct mdss_panel_data *pdata;
 	struct mdss_panel_cfg *pan_cfg = NULL;
+#ifdef CONFIG_HUAWEI_DSM
+	struct dsm_dev dsm_lcd = {
+		.name = "dsm_lcd",
+		.fops = NULL,
+		.buff_size = 1024,
+	};
+#endif
 
 	if (!pdev || !pdev->dev.of_node) {
 		pr_err("%s: pdev not found for DSI controller\n", __func__);
@@ -3274,6 +3341,12 @@ static int mdss_dsi_ctrl_probe(struct platform_device *pdev)
 		pr_err("%s: dsi panel dev reg failed\n", __func__);
 		goto error_pan_node;
 	}
+
+#ifdef CONFIG_HUAWEI_DSM
+	if (!lcd_dclient) {
+		lcd_dclient = dsm_register_client(&dsm_lcd);
+	}
+#endif
 
 	pinfo = &(ctrl_pdata->panel_data.panel_info);
 	if (!(mdss_dsi_is_hw_config_split(ctrl_pdata->shared_data) &&
@@ -3962,6 +4035,7 @@ static int mdss_dsi_irq_init(struct device *dev, int irq_no,
 	return ret;
 }
 
+#ifndef CONFIG_LCDKIT_DRIVER
 static void mdss_dsi_parse_lane_swap(struct device_node *np, char *dlane_swap)
 {
 	const char *data;
@@ -3985,6 +4059,7 @@ static void mdss_dsi_parse_lane_swap(struct device_node *np, char *dlane_swap)
 			*dlane_swap = DSI_LANE_MAP_3210;
 	}
 }
+#endif
 
 static int mdss_dsi_parse_ctrl_params(struct platform_device *ctrl_pdev,
 	struct device_node *pan_node, struct mdss_dsi_ctrl_pdata *ctrl_pdata)
@@ -4177,6 +4252,12 @@ int dsi_panel_device_register(struct platform_device *ctrl_pdev,
 
 	mipi  = &(pinfo->mipi);
 
+#ifndef CONFIG_LCDKIT_DRIVER
+#ifdef CONFIG_HUAWEI_KERNEL_LCD
+	global_pdata = &(ctrl_pdata->panel_data);
+#endif
+#endif
+
 	pinfo->type =
 		((mipi->mode == DSI_VIDEO_MODE)
 			? MIPI_VIDEO_PANEL : MIPI_CMD_PANEL);
@@ -4193,7 +4274,7 @@ int dsi_panel_device_register(struct platform_device *ctrl_pdev,
 	pr_debug("%s: pclk=%d, bclk=%d\n", __func__,
 			ctrl_pdata->pclk_rate, ctrl_pdata->byte_clk_rate);
 
-
+    #ifndef CONFIG_LCDKIT_DRIVER
 	rc = mdss_dsi_get_dt_vreg_data(&ctrl_pdev->dev, pan_node,
 		&ctrl_pdata->panel_power_data, DSI_PANEL_PM);
 	if (rc) {
@@ -4210,6 +4291,14 @@ int dsi_panel_device_register(struct platform_device *ctrl_pdev,
 						__func__, rc);
 		return rc;
 	}
+    #else
+    rc = lcdkit_power_config(ctrl_pdev, ctrl_pdata, pan_node);
+	if (rc) {
+		pr_err("%s: failed to init panel power, rc=%d\n",
+						__func__, rc);
+		return rc;
+	}
+    #endif
 
 	rc = mdss_dsi_parse_ctrl_params(ctrl_pdev, pan_node, ctrl_pdata);
 	if (rc) {
@@ -4228,6 +4317,12 @@ int dsi_panel_device_register(struct platform_device *ctrl_pdev,
 						__func__, rc);
 		return rc;
 	}
+
+	#ifdef CONFIG_LCDKIT_DRIVER
+    lcdkit_ctrl_gpio_init(ctrl_pdata);
+
+    lcdkit_set_dsi_ctrl_pdev(ctrl_pdev);
+    #endif
 
 	if (mdss_dsi_retrieve_ctrl_resources(ctrl_pdev,
 					     pinfo->pdest,
@@ -4327,6 +4422,10 @@ int dsi_panel_device_register(struct platform_device *ctrl_pdev,
 	pr_debug("%s: Panel data initialized\n", __func__);
 	return 0;
 }
+
+#ifdef CONFIG_LCDKIT_DRIVER
+#include "lcdkit_dsi.c"
+#endif
 
 static const struct of_device_id mdss_dsi_dt_match[] = {
 	{.compatible = "qcom,mdss-dsi"},

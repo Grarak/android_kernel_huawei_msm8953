@@ -99,6 +99,9 @@ enum dsi_panel_bl_ctrl {
 	BL_PWM,
 	BL_WLED,
 	BL_DCS_CMD,
+	#ifdef CONFIG_LCDKIT_DRIVER
+	BL_IC_TI,
+	#endif
 	UNKNOWN_CTRL,
 };
 
@@ -394,6 +397,10 @@ struct dsi_err_container {
 #define MDSS_DSI_COMMAND_COMPRESSION_MODE_CTRL3	0x02b0
 #define MSM_DBA_CHIP_NAME_MAX_LEN				20
 
+enum hw_product_pad_conifg{
+	HW_PRODUCT_PAD_NONE = 0,
+	HW_PRODUCT_PAD_KOBE = 1,
+};
 struct mdss_dsi_ctrl_pdata {
 	int ndx;	/* panel_num */
 	int (*on) (struct mdss_panel_data *pdata);
@@ -431,6 +438,11 @@ struct mdss_dsi_ctrl_pdata {
 	int disp_te_gpio;
 	int rst_gpio;
 	int disp_en_gpio;
+
+	#ifdef CONFIG_LCDKIT_DRIVER
+	int disp_bl_gpio;
+	#endif
+
 	int bklt_en_gpio;
 	int mode_gpio;
 	int intf_mux_gpio;
@@ -515,6 +527,16 @@ struct mdss_dsi_ctrl_pdata {
 
 	struct dsi_buf tx_buf;
 	struct dsi_buf rx_buf;
+
+#ifndef CONFIG_LCDKIT_DRIVER
+#ifdef CONFIG_HUAWEI_KERNEL_LCD
+	u32 esd_check_enable;
+	struct dsi_panel_cmds esd_cmds;
+	u32 dsm_check_enable;
+	struct dsi_panel_cmds dsm_cmds;
+#endif
+#endif
+
 	struct dsi_buf status_buf;
 	int status_mode;
 	int rx_len;
@@ -557,6 +579,24 @@ struct mdss_dsi_ctrl_pdata {
 	bool update_phy_timing; /* flag to recalculate PHY timings */
 
 	bool phy_power_off;
+
+#ifndef CONFIG_LCDKIT_DRIVER
+#ifdef CONFIG_HUAWEI_KERNEL_LCD
+	struct dsi_panel_cmds dot_inversion_cmds;
+	struct dsi_panel_cmds column_inversion_cmds;
+	u32 long_read_flag;
+	u32 skip_reg_read;
+	char reg_expect_value;
+	u32 reg_expect_count;
+	bool frame_checksum_support;
+	u32 panel_checksum_cmd_len;
+	struct dsi_panel_cmds dsi_frame_crc_enable_cmds;
+	struct dsi_panel_cmds dsi_frame_crc_disable_cmds;
+	u32 frame_crc_read_cmds[8];
+	u32 frame_crc_read_cmds_value[24];
+#endif
+#endif
+
 };
 
 struct dsi_status_data {
@@ -833,6 +873,12 @@ static inline bool mdss_dsi_is_ctrl_clk_master(struct mdss_dsi_ctrl_pdata *ctrl)
 	return mdss_dsi_is_hw_config_split(ctrl->shared_data) &&
 		(ctrl->ndx == DSI_CTRL_CLK_MASTER);
 }
+
+#ifndef CONFIG_LCDKIT_DRIVER
+#ifdef CONFIG_HUAWEI_KERNEL_LCD
+int panel_check_live_status(struct mdss_dsi_ctrl_pdata *ctrl);
+#endif
+#endif
 
 static inline bool mdss_dsi_is_ctrl_clk_slave(struct mdss_dsi_ctrl_pdata *ctrl)
 {

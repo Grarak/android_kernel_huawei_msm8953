@@ -2985,6 +2985,7 @@ void ipa3_generate_flt_mac_addr_eq(struct ipa_ipfltri_rule_eq *eq_atrb,
 {
 	u32 mask, value;
 
+
 	eq_atrb->offset_meq_32[ofst_meq32].offset = hdr_mac_addr_offset;
 
 	mask = (mac_addr_mask[3] & 0xFF)
@@ -3001,6 +3002,7 @@ void ipa3_generate_flt_mac_addr_eq(struct ipa_ipfltri_rule_eq *eq_atrb,
 
 	eq_atrb->offset_meq_32[ofst_meq32 + 1].offset =
 		hdr_mac_addr_offset + 4;
+
 
 	mask = ((mac_addr_mask[5] << 16) & 0xFF0000)
 		| ((mac_addr_mask[4] << 24) & 0xFF000000);
