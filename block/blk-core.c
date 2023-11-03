@@ -32,6 +32,7 @@
 #include <linux/delay.h>
 #include <linux/ratelimit.h>
 #include <linux/pm_runtime.h>
+
 #define CREATE_TRACE_POINTS
 #include <trace/events/block.h>
 
@@ -744,7 +745,6 @@ blk_init_allocated_queue(struct request_queue *q, request_fn_proc *rfn,
 
 fail:
 	blk_free_flush_queue(q->fq);
-	q->rq_wb = NULL;
 	return NULL;
 }
 EXPORT_SYMBOL(blk_init_allocated_queue);
@@ -1272,6 +1272,7 @@ void blk_requeue_request(struct request_queue *q, struct request *rq)
 		blk_queue_end_tag(q, rq);
 
 	BUG_ON(blk_queued_rq(rq));
+
 	elv_requeue_request(q, rq);
 }
 EXPORT_SYMBOL(blk_requeue_request);
@@ -1678,10 +1679,6 @@ static inline void blk_partition_remap(struct bio *bio)
 static void handle_bad_sector(struct bio *bio)
 {
 	char b[BDEVNAME_SIZE];
-	char devname[BDEVNAME_SIZE];
-
-	memset(devname, 0x00, BDEVNAME_SIZE);
-	bdevname(bio->bi_bdev, devname);
 
 	printk(KERN_INFO "attempt to access beyond end of device\n");
 	printk(KERN_INFO "%s: rw=%ld, want=%Lu, limit=%Lu\n",
@@ -1689,9 +1686,7 @@ static void handle_bad_sector(struct bio *bio)
 			bio->bi_rw,
 			(unsigned long long)bio_end_sector(bio),
 			(long long)(i_size_read(bio->bi_bdev->bd_inode) >> 9));
-	if(NULL != strstr(devname,"mmcblk1p1")) {
-		panic("attempt to access beyond end of mmc1\n");
-	}
+
 	set_bit(BIO_EOF, &bio->bi_flags);
 }
 
@@ -1759,69 +1754,6 @@ static inline int bio_check_eod(struct bio *bio, unsigned int nr_sectors)
 	return 0;
 }
 
-#define UPDATE_TIME (HZ / 2)
-static void blk_update_perf(struct request_queue *q,
-	struct hd_struct *p)
-{
-	unsigned long now = jiffies;
-	unsigned long last = q->bw_timestamp;
-	sector_t read_sect, write_sect, tmp_sect;
-	unsigned long read_ios, write_ios, tmp_ios;
-	unsigned long current_ticks;
-	unsigned long busy_ticks;
-
-	/*lint -save -e550 -e774*/
-	if (time_before(now, last + UPDATE_TIME))
-		return;
-	/*lint -restore*/
-
-	/*lint -save -e50 -e747 -e774 -e1072*/
-	if (cmpxchg(&q->bw_timestamp, last, now) != last)
-		return;
-	/*lint -restore*/
-
-	/*lint -save -e40 -e409 -e530 -e570 -e574 -e713 -e737 -e1058 -e1514*/
-	tmp_sect = part_stat_read(p, sectors[READ]);
-	read_sect = tmp_sect - q->last_sects[READ];
-	q->last_sects[READ] = tmp_sect;
-	tmp_sect = part_stat_read(p, sectors[WRITE]);
-	write_sect = tmp_sect - q->last_sects[WRITE];
-	q->last_sects[WRITE] = tmp_sect;
-
-	tmp_ios = part_stat_read(p, ios[READ]);
-	read_ios = tmp_ios - q->last_ios[READ];
-	q->last_ios[READ] = tmp_ios;
-	tmp_ios = part_stat_read(p, ios[WRITE]);
-	write_ios = tmp_ios - q->last_ios[WRITE];
-	q->last_ios[WRITE] = tmp_ios;
-
-	current_ticks = part_stat_read(p, io_ticks);
-	busy_ticks = current_ticks - q->last_ticks;
-	q->last_ticks = current_ticks;
-	/*lint -restore*/
-
-	/* Don't account for long idle */
-	if (now - last > UPDATE_TIME * 2)
-		return;
-	/* Disk load is too low or driver doesn't account io_ticks */
-	if (busy_ticks == 0)
-		return;
-
-	if (busy_ticks > now - last)
-		busy_ticks = now - last;
-
-	/*lint -save -e712 -e713*/
-	tmp_sect = (read_sect + write_sect) * HZ;
-	sector_div(tmp_sect, busy_ticks);
-	q->disk_bw = tmp_sect;
-	/*lint -restore*/
-
-	tmp_ios = (read_ios + write_ios) * HZ / busy_ticks;
-	q->disk_iops = tmp_ios;
-/*lint -save -e550*/
-}
-/*lint -restore*/
-
 static noinline_for_stack bool
 generic_make_request_checks(struct bio *bio)
 {
@@ -1875,8 +1807,7 @@ generic_make_request_checks(struct bio *bio)
 	 * drivers without flush support don't have to worry
 	 * about them.
 	 */
-	if ((bio->bi_rw & (REQ_FLUSH | REQ_FUA)) &&
-	    !test_bit(QUEUE_FLAG_WC, &q->queue_flags)) {
+	if ((bio->bi_rw & (REQ_FLUSH | REQ_FUA)) && !q->flush_flags) {
 		bio->bi_rw &= ~(REQ_FLUSH | REQ_FUA);
 		if (!nr_sectors) {
 			err = 0;
@@ -1903,9 +1834,6 @@ generic_make_request_checks(struct bio *bio)
 	 * layer knows how to live with it.
 	 */
 	create_io_context(GFP_ATOMIC, q->node);
-
-	blk_update_perf(q,
-		part->partno ? &part_to_disk(part)->part0 : part);
 
 	if (blk_throtl_bio(q, bio))
 		return false;	/* throttled, will be resubmitted later */

@@ -21,7 +21,7 @@
 #include <linux/delay.h>
 
 #include <trace/events/block.h>
- 
+
 #define DM_MSG_PREFIX "core"
 
 #ifdef CONFIG_PRINTK

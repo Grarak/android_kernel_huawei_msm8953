@@ -272,7 +272,6 @@ static void __blk_mq_free_request(struct blk_mq_hw_ctx *hctx,
 
 	if (rq->cmd_flags & REQ_MQ_INFLIGHT)
 		atomic_dec(&hctx->nr_active);
-
 	rq->cmd_flags = 0;
 
 	clear_bit(REQ_ATOM_STARTED, &rq->atomic_flags);
@@ -296,9 +295,9 @@ inline void __blk_mq_end_request(struct request *rq, int error)
 {
 	blk_account_io_done(rq);
 
-	if (rq->end_io)
+	if (rq->end_io) {
 		rq->end_io(rq, error);
-	else {
+	} else {
 		if (unlikely(blk_bidi_rq(rq)))
 			blk_mq_free_request(rq->next_rq);
 		blk_mq_free_request(rq);
@@ -1900,8 +1899,6 @@ EXPORT_SYMBOL(blk_mq_init_queue);
 void blk_mq_free_queue(struct request_queue *q)
 {
 	struct blk_mq_tag_set	*set = q->tag_set;
-
-	q->rq_wb = NULL;
 
 	blk_mq_del_queue_tag_set(q);
 
