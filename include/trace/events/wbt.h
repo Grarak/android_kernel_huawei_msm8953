@@ -5,7 +5,6 @@
 #define _TRACE_WBT_H
 
 #include <linux/tracepoint.h>
-#include <linux/wbt.h>
 
 /**
  * wbt_stat - trace stats for blk_wb

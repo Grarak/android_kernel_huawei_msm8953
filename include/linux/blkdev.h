@@ -22,7 +22,6 @@
 #include <linux/smp.h>
 #include <linux/rcupdate.h>
 #include <linux/percpu-refcount.h>
-#include <linux/wbt.h>
 
 #include <asm/scatterlist.h>
 
@@ -166,7 +165,6 @@ struct request {
 	struct gendisk *rq_disk;
 	struct hd_struct *part;
 	unsigned long start_time;
-	struct wb_issue_stat wb_stat;
 #ifdef CONFIG_BLK_CGROUP
 	struct request_list *rl;		/* rl this rq is alloced from */
 	unsigned long long start_time_ns;
@@ -429,10 +427,6 @@ struct request_queue {
 
 	unsigned int		nr_sorted;
 	unsigned int		in_flight[2];
-
-#ifdef CONFIG_WBT
-	struct blk_rq_stat	rq_stats[4];
-#endif
 
 	/*
 	 * Number of active block driver functions for which blk_drain_queue()
