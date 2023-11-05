@@ -16,6 +16,23 @@ Copyright 2010-2014 by HUAWEI Technologies, Inc.  All Rights Reserved.
 	compatible = "qcom,msm8953-mtp", "qcom,msm8953", "qcom,mtp";
 };
 
+&firmware {
+	android {
+		compatible = "android,firmware";
+		fstab {
+			compatible = "android,fstab";
+			vendor {
+				compatible = "android,vendor";
+				dev = "/dev/block/platform/soc/7824900.sdhci/by-name/vendor";
+				type = "ext4";
+				mnt_flags = "ro,barrier=1,discard";
+				fsmgr_flags = "wait";
+				status = "ok";
+			};
+		};
+	};
+};
+
 &spmi_bus {
 
 	qcom,pm8950@0 {
